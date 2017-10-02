@@ -61,7 +61,8 @@ class results extends \mod_lti\local\ltiservice\resource_base {
      * @param mod_lti\local\ltiservice\response $response  Response object for this request.
      */
     public function execute($response) {
-        global $CFG;
+        global $CFG, $DB;
+
         $params = $this->parse_template();
         $contextid = $params['context_id'];
         $itemid = $params['item_id'];
@@ -78,8 +79,11 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             if (!$this->check_tool_proxy(null, $response->get_request_data())) {
                 throw new \Exception(null, 401);
             }
-            if (!empty($contenttype) && !in_array($contenttype, $this->formats)) {
+            if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
+            }
+            if ($DB->get_record('course', array('id' => $contextid)) === false) {
+                throw new \Exception(null, 404);
             }
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid, true)) === false) {
                 throw new \Exception(null, 404);

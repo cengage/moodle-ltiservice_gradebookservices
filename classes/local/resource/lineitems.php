@@ -64,6 +64,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param mod_lti\local\ltiservice\response $response  Response object for this request.
      */
     public function execute($response) {
+        global $DB;
 
         $params = $this->parse_template();
 
@@ -84,6 +85,10 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
             }
+            if ($DB->get_record('course', array('id' => $contextid)) === false) {
+                throw new \Exception(null, 404);
+            }
+
 
             switch ($response->get_request_method()) {
                 case 'GET':
