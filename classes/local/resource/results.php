@@ -123,64 +123,58 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
         $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
 
-        if (!$grades) {
-            throw new \Exception(null, 404);
-        } else {
-
-            if ($limitnum > 0) {
-                // Since we only display grades that have been modified, we need to filter first in order to support
-                // paging.
-                $resultgrades = array_filter($grades, function ($grade) {
-                    return !empty($grade->timemodified);
-                });
-
-                // We slice to the requested item offset to insure proper item is always first, and we always return
-                // first pageset of any remaining items.
-                $grades = array_slice($resultgrades, $limitfrom);
-                if (count($grades) > 0) {
-                    $pagedgrades = array_chunk($grades, $limitnum);
-                    $pageset = 0;
-                    $grades = $pagedgrades[$pageset];
-                }
-
-                if (count($grades) == $limitnum) {
-                    // To be consistent with paging behavior elsewhere which uses Moodle DB limitfrom and limitnum where
-                    // an empty page collection may be returned for the final offset when the last page set contains the
-                    // full limit of items, do the same here.
-                    $limitfrom += $limitnum;
-                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
-                }
+        if ($limitnum > 0) {
+            // Since we only display grades that have been modified, we need to filter first in order to support
+            // paging.
+            $resultgrades = array_filter($grades, function ($grade) {
+                return !empty($grade->timemodified);
+            });
+            // We slice to the requested item offset to insure proper item is always first, and we always return
+            // first pageset of any remaining items.
+            $grades = array_slice($resultgrades, $limitfrom);
+            if (count($grades) > 0) {
+                $pagedgrades = array_chunk($grades, $limitnum);
+                $pageset = 0;
+                $grades = $pagedgrades[$pageset];
             }
 
-            $json = <<< EOD
+            if (count($grades) == $limitnum) {
+                // To be consistent with paging behavior elsewhere which uses Moodle DB limitfrom and limitnum where
+                // an empty page collection may be returned for the final offset when the last page set contains the
+                // full limit of items, do the same here.
+                $limitfrom += $limitnum;
+                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+            }
+        }
+
+        $json = <<< EOD
 {
   "results" : [
 EOD;
-            $lineitem = new lineitem($this->get_service());
-            $endpoint = $lineitem->get_endpoint();
-            $sep = "\n        ";
-            foreach ($grades as $grade) {
-                if (!empty($grade->timemodified)) {
-                    $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
-                    $sep = ",\n        ";
-                }
+        $lineitem = new lineitem($this->get_service());
+        $endpoint = $lineitem->get_endpoint();
+        $sep = "\n        ";
+        foreach ($grades as $grade) {
+            if (!empty($grade->timemodified)) {
+                $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
+                $sep = ",\n        ";
             }
-            $json .= <<< EOD
+        }
+        $json .= <<< EOD
 
   ]
 EOD;
-            if ($nextpage) {
-                $json .= ",\n";
-                $json .= <<< EOD
-  "nextPage" : "{$nextpage}"
-EOD;
-            }
+        if ($nextpage) {
+            $json .= ",\n";
             $json .= <<< EOD
+ "nextPage" : "{$nextpage}"
+EOD;
+        }
+        $json .= <<< EOD
 
 }
 EOD;
-            return $json;
-        }
+        return $json;
     }
 
 
