@@ -89,7 +89,6 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 404);
             }
 
-
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
@@ -139,12 +138,12 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         if ($limitnum > 0) {
             if (count($items) == $limitnum) {
                 $limitfrom += $limitnum;
-                $next_page = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
                 if (isset($resourceid)) {
-                    $next_page .= "&resource_id={$resourceid}";
+                    $nextpage .= "&resource_id={$resourceid}";
                 }
                 if (isset($resourcelinkid)) {
-                    $next_page .= "&resource_link_id={$resourcelinkid}";
+                    $nextpage .= "&resource_link_id={$resourcelinkid}";
                 }
             }
         }
@@ -163,10 +162,10 @@ EOD;
 
   ]
 EOD;
-        if ($next_page) {
+        if ($nextpage) {
             $json .= ",\n";
             $json .= <<< EOD
-  "nextPage" : "{$next_page}"
+  "nextPage" : "{$nextpage}"
 
 EOD;
         }

@@ -122,7 +122,8 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
     private function get_request($response, $contextid, $item) {
 
         $response->set_content_type($this->formats[0]);
-        $json = gradebookservices::item_to_json($item, substr(parent::get_endpoint(), 0, strrpos(parent::get_endpoint(), "/", -10)));
+        $json = gradebookservices::item_to_json($item, substr(parent::get_endpoint(),
+                0, strrpos(parent::get_endpoint(), "/", -10)));
         $response->set_body($json);
 
     }

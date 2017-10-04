@@ -53,7 +53,6 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
         $this->variables[] = 'Scores.url';
         $this->formats[] = 'application/vnd.ims.lis.v1.scorecontainer+json';
         $this->formats[] = 'application/vnd.ims.lis.v1.score+json';
-//        $this->methods[] = 'GET';
         $this->methods[] = 'POST';
 
     }
@@ -99,14 +98,6 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
             switch ($response->get_request_method()) {
                 case 'GET':
                     $response->set_code(405);
-
-//                    gradebookservices::validate_paging_query_parameters($_GET['from'], $_GET['limit']);
-//                    $limitfrom = optional_param('from', 0, PARAM_INT);
-//                    $limitnum = optional_param('limit', 0, PARAM_INT);
-//
-//                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum);
-//                    $response->set_content_type($this->formats[0]);
-//                    $response->set_body($json);
                     break;
                 case 'POST':
                     $json = $this->post_request_json($response, $response->get_request_data(), $item);
@@ -145,13 +136,13 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
 
             if ($limitnum > 0) {
                 // Since we only display grades that have been modified, we need to filter first in order to support
-                // paging
+                // paging.
                 $resultgrades = array_filter($grades, function ($grade) {
                     return !empty($grade->timemodified);
                 });
 
                 // We slice to the requested item offset to insure proper item is always first, and we always return
-                // first pageset of any remaining items
+                // first pageset of any remaining items.
                 $grades = array_slice($resultgrades, $limitfrom);
                 if (count($grades) > 0) {
                     $pagedgrades = array_chunk($grades, $limitnum);
@@ -162,9 +153,9 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                 if (count($grades) == $limitnum) {
                     // To be consistent with paging behavior elsewhere which uses Moodle DB limitfrom and limitnum where
                     // an empty page collection may be returned for the final offset when the last page set contains the
-                    // full limit of items, do the same here
+                    // full limit of items, do the same here.
                     $limitfrom += $limitnum;
-                    $next_page = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
                 }
             }
 
@@ -186,10 +177,10 @@ EOD;
 
   ]
 EOD;
-            if ($next_page) {
+            if ($nextpage) {
                 $json .= ",\n";
                 $json .= <<< EOD
-  "nextPage" : "{$next_page}"
+  "nextPage" : "{$nextpage}"
 EOD;
             }
             $json .= <<< EOD

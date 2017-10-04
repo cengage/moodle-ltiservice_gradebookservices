@@ -94,13 +94,13 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             'tpid2' => $this->get_tool_proxy()->id
         );
 
-        $optional_filters = "";
+        $optionalfilters = "";
         if (isset($resourceid)) {
-            $optional_filters .= " AND (i.idnumber = :resourceid)";
+            $optionalfilters .= " AND (i.idnumber = :resourceid)";
             $params['resourceid'] = $resourceid;
         }
         if (isset($resourcelinkid)) {
-            $optional_filters .= " AND (i.iteminstance = :resourcelinkid)";
+            $optionalfilters .= " AND (i.iteminstance = :resourcelinkid)";
             $params['resourcelinkid'] = $resourcelinkid;
         }
         $sql = "SELECT i.*,s.lineitemtoolproviderid
@@ -114,7 +114,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                              AND (t.toolproxyid = :tpid))
                             OR ((s.toolproxyid = :tpid2)
                                 AND (i.itemnumber = s.id)))
-                                {$optional_filters}
+                                {$optionalfilters}
                                 ORDER by i.id";
 
         try {
