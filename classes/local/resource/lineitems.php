@@ -93,9 +93,14 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
                     $resourcelinkid = optional_param('resource_link_id', null, PARAM_TEXT);
-                    gradebookservices::validate_paging_query_parameters($_GET['from'], $_GET['limit']);
-                    $limitfrom = optional_param('from', 0, PARAM_INT);
+                    if (isset($_GET['limit'])) {
+                        gradebookservices::validate_paging_query_parameters($_GET['limit']);
+                    }
                     $limitnum = optional_param('limit', 0, PARAM_INT);
+                    if (isset($_GET['from'])) {
+                        gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
+                    }
+                    $limitfrom = optional_param('from', 0, PARAM_INT);
 
                     $items = $this->get_service()->get_lineitems($contextid, $resourceid, $resourcelinkid, $limitfrom,
                         $limitnum);
@@ -135,7 +140,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      */
     private function get_request_json($contextid, $items, $resourceid, $resourcelinkid, $limitfrom, $limitnum) {
 
-        if ($limitnum > 0) {
+        if (isset($limitnum) && $limitnum > 0) {
             if (count($items) == $limitnum) {
                 $limitfrom += $limitnum;
                 $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
@@ -162,7 +167,7 @@ EOD;
 
   ]
 EOD;
-        if ($nextpage) {
+        if (isset($nextpage) && ($nextpage)) {
             $json .= ",\n";
             $json .= <<< EOD
   "nextPage" : "{$nextpage}"

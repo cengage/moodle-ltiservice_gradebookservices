@@ -91,10 +91,14 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    gradebookservices::validate_paging_query_parameters($_GET['from'], $_GET['limit']);
-                    $limitfrom = optional_param('from', 0, PARAM_INT);
+                    if (isset($_GET['limit'])) {
+                        gradebookservices::validate_paging_query_parameters($_GET['limit']);
+                    }
                     $limitnum = optional_param('limit', 0, PARAM_INT);
-
+                    if (isset($_GET['from'])) {
+                        gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
+                    }
+                    $limitfrom = optional_param('from', 0, PARAM_INT);
                     $json = $this->get_request_json($item->id, $limitfrom, $limitnum);
                     $response->set_content_type($this->formats[0]);
                     $response->set_body($json);
@@ -123,7 +127,7 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
         $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
 
-        if ($grades && $limitnum > 0) {
+        if ($grades && isset($limitnum) && $limitnum > 0) {
             // Since we only display grades that have been modified, we need to filter first in order to support
             // paging.
             $resultgrades = array_filter($grades, function ($grade) {
@@ -154,7 +158,7 @@ EOD;
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
         $sep = "\n        ";
-        if($grades){
+        if ($grades) {
             foreach ($grades as $grade) {
                 if (!empty($grade->timemodified)) {
                     $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
@@ -166,7 +170,7 @@ EOD;
 
   ]
 EOD;
-        if ($nextpage) {
+        if (isset($nextpage) && ($nextpage)) {
             $json .= ",\n";
             $json .= <<< EOD
  "nextPage" : "{$nextpage}"

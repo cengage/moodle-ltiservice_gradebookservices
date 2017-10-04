@@ -382,12 +382,12 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     /**
      * Validates paging query parameters for boundary conditions.
      *
+     * @param string $limit maximum number of line items to include in the response, must be greater than one if provided
      * @param string $from offset for the first line item to include in this paged set, must be zero or greater and
      *                    requires a limit
-     * @param string $limit maximum number of line items to include in the response, must be greater than one if provided
      * @throws \Exception if the paging query parameters are invalid
      */
-    public static function validate_paging_query_parameters($from, $limit) {
+    public static function validate_paging_query_parameters($limit, $from=null) {
 
         if (isset($limit)) {
             if (!is_numeric($limit) || $limit <= 0) {
