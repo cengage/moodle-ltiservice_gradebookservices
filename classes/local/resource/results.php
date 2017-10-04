@@ -123,7 +123,7 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
         $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
 
-        if ($limitnum > 0) {
+        if ($grades && $limitnum > 0) {
             // Since we only display grades that have been modified, we need to filter first in order to support
             // paging.
             $resultgrades = array_filter($grades, function ($grade) {
@@ -154,10 +154,12 @@ EOD;
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
         $sep = "\n        ";
-        foreach ($grades as $grade) {
-            if (!empty($grade->timemodified)) {
-                $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
-                $sep = ",\n        ";
+        if($grades){
+            foreach ($grades as $grade) {
+                if (!empty($grade->timemodified)) {
+                    $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
+                    $sep = ",\n        ";
+                }
             }
         }
         $json .= <<< EOD
