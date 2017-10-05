@@ -89,6 +89,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     public function get_lineitems($courseid, $resourceid, $resourcelinkid, $limitfrom, $limitnum) {
         global $DB;
 
+        // Select all lti potential linetiems in site.
         $params = array('courseid' => $courseid, 'itemtype' => 'mod', 'itemmodule' => 'lti',
             'tpid' => $this->get_tool_proxy()->id,
             'tpid2' => $this->get_tool_proxy()->id
@@ -103,28 +104,40 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             $optionalfilters .= " AND (i.iteminstance = :resourcelinkid)";
             $params['resourcelinkid'] = $resourcelinkid;
         }
-        $sql = "SELECT i.*,s.lineitemtoolproviderid
-                  FROM {grade_items} i
-             LEFT JOIN {lti} m ON i.iteminstance = m.id
-             LEFT JOIN {lti_types} t ON m.typeid = t.id
-             LEFT JOIN {ltiservice_gradebookservices} s ON i.itemnumber = s.id
-                 WHERE (i.courseid = :courseid)
-                       AND (((i.itemtype = :itemtype)
-                             AND (i.itemmodule = :itemmodule)
-                             AND (t.toolproxyid = :tpid))
-                            OR ((s.toolproxyid = :tpid2)
-                                AND (i.itemnumber = s.id)))
-                                {$optionalfilters}
-                                ORDER by i.id";
+
+        $sql = "SELECT i.*
+        FROM {grade_items} i
+        WHERE (i.courseid = :courseid)
+        AND (i.itemtype = :itemtype)
+        AND (i.itemmodule = :itemmodule)
+        {$optionalfilters}
+        ORDER by i.id";
 
         try {
-            $lineitems = $DB->get_records_sql($sql, $params, $limitfrom, $limitnum);
+            $lineitems = $DB->get_records_sql($sql, $params);
         } catch (\Exception $e) {
             throw new \Exception(null, 500);
         }
 
-        return $lineitems;
-
+        // For each one, check the gbs id, and check that toolproxy matches. If so, add the
+        // lineitemtoolproviderid to the result and add it to a final results array.
+        $lineitemstoreturn = array();
+        if ($lineitems) {
+            foreach ($lineitems as $lineitem) {
+                $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($lineitem->id);
+                if ($gbs) {
+                    if ($this->get_tool_proxy()->id == $gbs->toolproxyid) {
+                        $lineitem->lineitemtoolproviderid = $gbs->lineitemtoolproviderid;
+                        array_push($lineitemstoreturn, $lineitem);
+                    }
+                }
+            }
+            // Return the right array based in the paging parameters limit and from.
+            if (($limitnum) && ($limitnum > 0)) {
+                $lineitemstoreturn = array_slice($lineitemstoreturn, $limitfrom, $limitnum);
+            }
+        }
+        return $lineitemstoreturn;
     }
 
     /**
@@ -134,33 +147,24 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @param string   $courseid   ID of course
      * @param string   $itemid     ID of lineitem
-     * @param boolean  $any        False if the lineitem should be one created via this web service
-     *                             and not one automatically created by LTI 1.1
      *
      * @return object
      */
-    public function get_lineitem($courseid, $itemid, $any) {
+    public function get_lineitem($courseid, $itemid) {
         global $DB;
 
-        if ($any) {
-            $where = "(((i.itemtype = :itemtype)
-                             AND (i.itemmodule = :itemmodule)
-                             AND (t.toolproxyid = :tpid2))
-                             OR ((s.toolproxyid = :tpid) AND (i.itemnumber = s.id)))";
-            $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
-                    'itemtype' => 'mod', 'itemmodule' => 'lti', 'tpid2' => $this->get_tool_proxy()->id);
-        } else {
-            $where = '(s.toolproxyid = :tpid) AND (i.itemnumber = s.id)';
-            $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id);
+        $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($itemid);
+        if (!$gbs) {
+            return false;
         }
         $sql = "SELECT i.*,s.lineitemtoolproviderid
-                  FROM {grade_items} i
-             LEFT JOIN {lti} m ON i.iteminstance = m.id
-             LEFT JOIN {lti_types} t ON m.typeid = t.id
-             LEFT JOIN {ltiservice_gradebookservices} s ON i.itemnumber = s.id
-                 WHERE (i.courseid = :courseid)
-                       AND (i.id = :itemid)
-                       AND {$where}";
+                FROM {grade_items} i,{ltiservice_gradebookservices} s
+                WHERE (i.courseid = :courseid)
+                        AND (i.id = :itemid)
+                        AND (s.id = :gbsid)
+                        AND (s.toolproxyid = :tpid)";
+        $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
+                'gbsid' => $gbs->id);
         try {
             $lineitem = $DB->get_records_sql($sql, $params);
             if (count($lineitem) === 1) {
@@ -377,6 +381,47 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         }
 
         return $gradableuser;
+    }
+
+    /**
+     * Find the right element in the ltiservice_gradebookservice table for a lineitem
+     *
+     * @param string $lineitemid            The lineitem
+     * @return the gradebookservice id or false if none
+     */
+    public static function find_ltiservice_gradebookservice_for_lineitem($lineitemid) {
+        global $CFG, $DB;
+
+        if (!$lineitemid) {
+            return false;
+        }
+        $gradeitem = $DB->get_record('grade_items', array('id' => $lineitemid));
+        if ($gradeitem) {
+            if ($gradeitem->iteminstance) {
+                $gbs1 = $DB->get_record('ltiservice_gradebookservices',
+                        array('id' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                if ($gbs1) {
+                    return $gbs1;
+                } else {
+                    $gbs2 = $DB->get_record('ltiservice_gradebookservices',
+                            array('previousid' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                    if ($gbs2) {
+                        return $gbs2;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                $gbs3 = $DB->get_record('ltiservice_gradebookservices', array('id' => $gradeitem->itemnumber));
+                if ($gbs3) {
+                    return $gbs3;
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
     }
 
     /**

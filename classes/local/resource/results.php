@@ -85,8 +85,11 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             if ($DB->get_record('course', array('id' => $contextid)) === false) {
                 throw new \Exception(null, 404);
             }
-            if (($item = $this->get_service()->get_lineitem($contextid, $itemid, true)) === false) {
+            if ($DB->get_record('grade_items', array('id' => $itemid)) === false) {
                 throw new \Exception(null, 404);
+            }
+            if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
+                throw new \Exception(null, 401);
             }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
