@@ -130,6 +130,23 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                         $lineitem->tag = $gbs->tag;
                         array_push($lineitemstoreturn, $lineitem);
                     }
+                } else {
+                    // We will need to check if the activity related belongs to our tool proxy.
+                    $ltiactivity = $DB->get_record('lti', array('id' => $lineitem->iteminstance));
+                    if (($ltiactivity) && (isset($ltiactivity->typeid))) {
+                        if ($ltiactivity->typeid != 0) {
+                            $tool = $DB->get_record('lti_types', array('id' => $ltiactivity->typeid));
+                        } else {
+                            $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $courseid);
+                            if (!$tool) {
+                                $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $courseid);
+                            }
+                        }
+                        if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
+                            $lineitem->tag = null;
+                            array_push($lineitemstoreturn, $lineitem);
+                        }
+                    }
                 }
             }
             // Return the right array based in the paging parameters limit and from.
@@ -155,29 +172,47 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($itemid);
         if (!$gbs) {
-            return false;
-        }
-        $sql = "SELECT i.*,s.tag
-                FROM {grade_items} i,{ltiservice_gradebookservices} s
-                WHERE (i.courseid = :courseid)
-                        AND (i.id = :itemid)
-                        AND (s.id = :gbsid)
-                        AND (s.toolproxyid = :tpid)";
-        $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
-                'gbsid' => $gbs->id);
-        try {
-            $lineitem = $DB->get_records_sql($sql, $params);
-            if (count($lineitem) === 1) {
-                $lineitem = reset($lineitem);
+            $lineitem = $DB->get_record('grade_items', array('id' => $itemid));
+            // We will need to check if the activity related belongs to our tool proxy.
+            $ltiactivity = $DB->get_record('lti', array('id' => $lineitem->iteminstance));
+            if (($ltiactivity) && (isset($ltiactivity->typeid))) {
+                if ($ltiactivity->typeid != 0) {
+                    $tool = $DB->get_record('lti_types', array('id' => $ltiactivity->typeid));
+                } else {
+                    $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $courseid);
+                    if (!$tool) {
+                        $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $courseid);
+                    }
+                }
+                if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
+                    $lineitem->tag = null;
+                } else {
+                     return false;
+                }
             } else {
+                return false;
+            }
+        } else {
+            $sql = "SELECT i.*,s.tag
+                    FROM {grade_items} i,{ltiservice_gradebookservices} s
+                    WHERE (i.courseid = :courseid)
+                            AND (i.id = :itemid)
+                            AND (s.id = :gbsid)
+                            AND (s.toolproxyid = :tpid)";
+            $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
+                    'gbsid' => $gbs->id);
+            try {
+                $lineitem = $DB->get_records_sql($sql, $params);
+                if (count($lineitem) === 1) {
+                    $lineitem = reset($lineitem);
+                } else {
+                    $lineitem = false;
+                }
+            } catch (\Exception $e) {
                 $lineitem = false;
             }
-        } catch (\Exception $e) {
-            $lineitem = false;
         }
-
         return $lineitem;
-
     }
 
 
@@ -398,18 +433,22 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $gradeitem = $DB->get_record('grade_items', array('id' => $lineitemid));
         if ($gradeitem) {
             if ($gradeitem->iteminstance) {
-                $gbs1 = $DB->get_record('ltiservice_gradebookservices',
-                        array('id' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
-                if ($gbs1) {
-                    return $gbs1;
-                } else {
-                    $gbs2 = $DB->get_record('ltiservice_gradebookservices',
-                            array('previousid' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
-                    if ($gbs2) {
-                        return $gbs2;
+                if (isset($gradeitem->itemnumber)) {
+                    $gbs1 = $DB->get_record('ltiservice_gradebookservices',
+                            array('id' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                    if ($gbs1) {
+                        return $gbs1;
                     } else {
-                        return false;
+                        $gbs2 = $DB->get_record('ltiservice_gradebookservices',
+                                array('previousid' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                        if ($gbs2) {
+                            return $gbs2;
+                        } else {
+                            return false;
+                        }
                     }
+                } else {
+                    return false;
                 }
             } else {
                 $gbs3 = $DB->get_record('ltiservice_gradebookservices', array('id' => $gradeitem->itemnumber));
