@@ -56,7 +56,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
                 'scaleid', 'outcomeid', 'gradepass', 'multfactor',
                 'plusfactor', 'aggregationcoef', 'aggregationcoef2', 'weightoverride',
                 'sortorder', 'display', 'decimals', 'hidden', 'locked', 'locktime',
-                'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'lineitemtoolproviderid', 'vendorcode', 'guid'));
+                'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'tag', 'vendorcode', 'guid'));
 
         // The lineitem(s) not related with any activity.
         // TODO: This will need to change if this module becomes part of the moodle core.
@@ -68,7 +68,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
                 'scaleid', 'outcomeid', 'gradepass', 'multfactor',
                 'plusfactor', 'aggregationcoef', 'aggregationcoef2', 'weightoverride',
                 'sortorder', 'display', 'decimals', 'hidden', 'locked', 'locktime',
-                'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'lineitemtoolproviderid', 'vendorcode', 'guid'));
+                'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'tag', 'vendorcode', 'guid'));
 
         // Grades.
         $gradegrades = new backup_nested_element('grade_grades');
@@ -90,13 +90,13 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         $gradegrades->add_child($gradegrade);
 
         // Define sources.
-        $thisactivitylineitemssql = "SELECT g.*,l.toolproxyid,l.lineitemtoolproviderid,t.vendorcode,t.guid
+        $thisactivitylineitemssql = "SELECT g.*,l.toolproxyid,l.tag,t.vendorcode,t.guid
                            FROM {grade_items} g
                            JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
                            JOIN {lti_tool_proxies} t ON (t.id = l.toolproxyid)
                            WHERE courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti' AND g.iteminstance = ? AND g.itemnumber>10000";
-        $nonactivitylineitemssql = "SELECT g.*,l.toolproxyid,l.lineitemtoolproviderid,t.vendorcode,t.guid
+        $nonactivitylineitemssql = "SELECT g.*,l.toolproxyid,l.tag,t.vendorcode,t.guid
                            FROM {grade_items} g
                            JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
                            JOIN {lti_tool_proxies} t ON (t.id = l.toolproxyid)

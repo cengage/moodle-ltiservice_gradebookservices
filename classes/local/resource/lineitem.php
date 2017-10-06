@@ -144,6 +144,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             throw new \Exception(null, 400);
         }
         $item = \grade_item::fetch(array('id' => $olditem->id, 'courseid' => $olditem->courseid));
+        $gbs = gradebookservices::find_ltiservice_gradebookservice_for_lineitem($olditem->id);
         $updategradeitem = false;
         $upgradegradebookservices = false;
         if (isset($json->label) && ($item->itemname !== $json->label)) {
@@ -159,6 +160,10 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         if (isset($json->resourceId) && ($item->idnumber !== $json->resourceId)) {
             $item->idnumber = $json->resourceId;
             $updategradeitem = true;
+        }
+        if (isset($json->tag) && ($gbs->tag !== $json->tag)) {
+            $gbs->tag = $json->tag;
+            $upgradegradebookservices = true;
         }
         if (isset($json->resourceLinkId) && is_numeric($json->resourceLinkId) &&
                 intval($item->iteminstance) !== intval($json->resourceLinkId)) {
@@ -179,10 +184,10 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         }
         if ($upgradegradebookservices) {
             try {
-                $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array('id' => $item->itemnumber,
+                $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array('id' => $gbs->id,
                      'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
                      'resourcelinkid' => $item->iteminstance,
-                     'lineitemtoolproviderid' => $lineitemtoolproviderid
+                     'tag' => $gbs->tag
                 ));
             } catch (\Exception $e) {
                 throw new \Exception(null, 500);

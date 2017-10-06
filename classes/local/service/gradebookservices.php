@@ -120,14 +120,14 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         }
 
         // For each one, check the gbs id, and check that toolproxy matches. If so, add the
-        // lineitemtoolproviderid to the result and add it to a final results array.
+        // tag to the result and add it to a final results array.
         $lineitemstoreturn = array();
         if ($lineitems) {
             foreach ($lineitems as $lineitem) {
                 $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($lineitem->id);
                 if ($gbs) {
                     if ($this->get_tool_proxy()->id == $gbs->toolproxyid) {
-                        $lineitem->lineitemtoolproviderid = $gbs->lineitemtoolproviderid;
+                        $lineitem->tag = $gbs->tag;
                         array_push($lineitemstoreturn, $lineitem);
                     }
                 }
@@ -157,7 +157,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         if (!$gbs) {
             return false;
         }
-        $sql = "SELECT i.*,s.lineitemtoolproviderid
+        $sql = "SELECT i.*,s.tag
                 FROM {grade_items} i,{ltiservice_gradebookservices} s
                 WHERE (i.courseid = :courseid)
                         AND (i.id = :itemid)
@@ -246,8 +246,8 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         }
         $lineitem->results = "{$endpoint}/{$item->id}/results";
         $lineitem->scores = "{$endpoint}/{$item->id}/scores";
-        if (!empty($item->lineitemtoolproviderid)) {
-            $lineitem->lineItemToolProviderId = $item->lineitemtoolproviderid;
+        if (!empty($item->tag)) {
+            $lineitem->tag = $item->tag;
         }
         if (isset($item->iteminstance)) {
             $lineitem->resourceLinkId = strval($item->iteminstance);

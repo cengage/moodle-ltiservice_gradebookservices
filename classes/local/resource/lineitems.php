@@ -206,7 +206,7 @@ EOD;
                 throw new \Exception(null, 404);
             }
         }
-        $lineitemtoolproviderid = (isset($json->lineItemToolProviderId)) ? $json->lineItemToolProviderId : '';
+        $tag = (isset($json->tag)) ? $json->tag : '';
         $max = 1;
         if (isset($json->scoreMaximum)) {
             $max = $json->scoreMaximum;
@@ -216,7 +216,7 @@ EOD;
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                 'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
                     'resourcelinkid' => $resourcelinkid,
-                    'lineitemtoolproviderid' => $lineitemtoolproviderid
+                    'tag' => $tag
             ));
         } catch (\Exception $e) {
             throw new \Exception(null, 500);
