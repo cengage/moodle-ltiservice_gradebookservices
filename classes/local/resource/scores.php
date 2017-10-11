@@ -95,7 +95,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 404);
             }
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
-                throw new \Exception(null, 401);
+                throw new \Exception(null, 403);
             }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
@@ -103,7 +103,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                     $response->set_code(405);
                     break;
                 case 'POST':
-                    $json = $this->post_request_json($response, $response->get_request_data(), $item);
+                    $json = $this->post_request_json($response, $response->get_request_data(), $item, $contextid);
                     $response->set_content_type($this->formats[1]);
                     break;
                 default:  // Should not be possible.
@@ -126,26 +126,43 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
      *
      * return string
      */
-    private function post_request_json($response, $body, $item) {
-
+    private function post_request_json($response, $body, $item, $contextid) {
         $result = json_decode($body);
         if (empty($result) ||
-            !isset($result->userId) ||
-            !isset($result->scoreGiven)|| !isset($result->gradingProgress)) {
+                !isset($result->userId) ||
+                !isset($result->timestamp) ||
+                !isset($result->gradingProgress) ||
+                !isset($result->activityProgress) ||
+                !isset($result->timestamp) ||
+                isset($result->timestamp) && !gradebookservices::validate_iso8601_date($result->timestamp) ||
+                (isset($result->scoreGiven) && !is_numeric($result->scoreGiven)) ||
+                (isset($result->scoreMaximum) && !is_numeric($result->scoreMaximum)) ||
+                (!gradebookservices::is_user_gradable_in_course($contextid, $result->userId))
+                ) {
             throw new \Exception(null, 400);
         }
+        $result->timemodified = intval($result->timestamp);
+
+        if (!isset($result->scoreMaximum)) {
+            $result->scoreMaximum = 1;
+        }
         $newgrade = true;
+        $response->set_code(201);
         $grade = \grade_grade::fetch(array('itemid' => $item->id, 'userid' => $result->userId));
         if ($grade &&  !empty($grade->timemodified)) {
-            $newgrade = false;
+            if ($grade->timemodified < strtotime($result->timestamp)) {
+                $newgrade = false;
+                $response->set_code(200);
+            } else {
+                throw new \Exception(null, 400);
+            }
         }
-        if ($result->gradingProgress != 'FullyGraded') {
-            $this->reset_result($item, $result->userId);
-        } else {
-            gradebookservices::set_grade_item($item, $result, $result->userId);
-        }
-        if ($newgrade) {
-            $response->set_code(201);
+        if (isset($result->scoreGiven)) {
+            if ($result->gradingProgress == 'FullyGraded') {
+                gradebookservices::set_grade_item($item, $result, $result->userId);
+            } else {
+                $this->reset_result($item, $result->userId);
+            }
         } else {
             $response->set_code(200);
         }

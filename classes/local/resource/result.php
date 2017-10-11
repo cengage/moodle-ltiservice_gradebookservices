@@ -89,7 +89,7 @@ class result extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 404);
             }
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
-                throw new \Exception(null, 401);
+                throw new \Exception(null, 403);
             }
 
             require_once($CFG->libdir.'/gradelib.php');

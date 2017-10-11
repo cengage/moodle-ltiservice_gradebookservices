@@ -86,6 +86,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 400);
             }
             if ($DB->get_record('course', array('id' => $contextid)) === false) {
+                $response->set_reason("Not Found: Course ". $contextid." doesn't exist.");
                 throw new \Exception(null, 404);
             }
 
@@ -193,25 +194,25 @@ EOD;
         global $CFG, $DB;
 
         $json = json_decode($body);
-        if (empty($json)) {
+        if (empty($json) ||
+                !isset($json->scoreMaximum) ||
+                !isset($json->label)) {
             throw new \Exception(null, 400);
         }
-
+        if (is_numeric($json->scoreMaximum)) {
+            $max = $json->scoreMaximum;
+        } else {
+            throw new \Exception(null, 400);
+        }
         require_once($CFG->libdir.'/gradelib.php');
-        $label = (isset($json->label)) ? $json->label : 'Item ' . time();
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
         $resourcelinkid = (isset($json->resourceLinkId)) ? $json->resourceLinkId : null;
         if ($resourcelinkid != null) {
             if (!gradebookservices::check_lti_id($resourcelinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
-                throw new \Exception(null, 404);
+                throw new \Exception(null, 403);
             }
         }
         $tag = (isset($json->tag)) ? $json->tag : '';
-        $max = 1;
-        if (isset($json->scoreMaximum)) {
-            $max = $json->scoreMaximum;
-        }
-
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                 'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
@@ -223,7 +224,7 @@ EOD;
         }
 
         $params = array();
-        $params['itemname'] = $label;
+        $params['itemname'] = $json->label;
         $params['gradetype'] = GRADE_TYPE_VALUE;
         $params['grademax']  = $max;
         $params['grademin']  = 0;

@@ -94,30 +94,21 @@ class score extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 404);
             }
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
-                throw new \Exception(null, 401);
+                throw new \Exception(null, 403);
             }
-
             require_once($CFG->libdir.'/gradelib.php');
-
-            $grade = \grade_grade::fetch(array('itemid' => $itemid, 'userid' => $resultid));
-            if ($grade === false) {
-                if (!gradebookservices::is_user_gradable_in_course($contextid, $resultid)) {
-                    throw new \Exception(null, 400);
-                }
-            }
             switch ($response->get_request_method()) {
                 case 'GET':
                     $response->set_code(405);
                     break;
                 case 'PUT':
-                    $json = $this->put_request($response->get_request_data(), $item, $resultid);
+                    $json = $this->put_request($response->get_request_data(), $item, $resultid, $contextid);
                     $response->set_body($json);
                     $response->set_code(200);
                     break;
                 case 'DELETE':
-                    debugging("delete 1");
-                    $this->delete_request($item, $resultid);
-                    $response->set_code(200);
+                    $this->delete_request($item, $resultid, $contextid);
+                    $response->set_code(204);
                     break;
                 default:  // Should not be possible.
                     throw new \Exception(null, 405);
@@ -159,23 +150,40 @@ class score extends \mod_lti\local\ltiservice\resource_base {
      * @param object $item        Lineitem instance
      * @param string $userid      User ID
      */
-    private function put_request($body, $item, $userid) {
+    private function put_request($body, $item, $userid, $contextid) {
 
         $score = json_decode($body);
         if (empty($score) ||
-        (isset($score->userId) && ($score->userId !== $userid)) ||
-        (!isset($score->scoreGiven))||(!isset($score->gradingProgress))) {
+                (isset($score->userId) && ($score->userId !== $userid)) ||
+                !isset($score->gradingProgress) ||
+                !isset($score->activityProgress) ||
+                !isset($score->timestamp) ||
+                isset($score->timestamp) && !gradebookservices::validate_iso8601_date($score->timestamp) ||
+                (isset($score->scoreGiven) && !is_numeric($score->scoreGiven)) ||
+                (isset($score->scoreMaximum) && !is_numeric($score->scoreMaximum)) ||
+                (!gradebookservices::is_user_gradable_in_course($contextid, $userid))
+                ) {
             throw new \Exception(null, 400);
         }
-        if ($score->gradingProgress == "FullyGraded") {
-            gradebookservices::set_grade_item($item, $score, $userid);
-        } else {
-            $this->delete_request($item, $score->userId);
+        $grade = \grade_grade::fetch(array('itemid' => $item->id, 'userid' => $userid));
+        if ($grade && (!empty($grade->timemodified)) && ($grade->timemodified > strtotime($score->timestamp))) {
+            throw new \Exception(null, 400);
+        }
+        $score->timemodified = strtotime($score->timestamp);
+        if (!isset($score->scoreMaximum)) {
+            $score->scoreMaximum = 1;
+        }
+        if (isset($score->scoreGiven)) {
+            if ($score->gradingProgress == "FullyGraded") {
+                gradebookservices::set_grade_item($item, $score, $userid);
+            } else {
+                $this->delete_request($item, $userid, $contextid);
+            }
         }
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
         $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
-        $id = "{$endpoint}/scores/{$score->userId}/score";
+        $id = "{$endpoint}/scores/$userid/score";
         $score->id = $id;
         $score->scoreOf = $endpoint;
         return json_encode($score, JSON_UNESCAPED_SLASHES);
@@ -189,8 +197,11 @@ class score extends \mod_lti\local\ltiservice\resource_base {
      * @param object $item       Lineitem instance
      * @param string  $userid    User ID
      */
-    private function delete_request($item, $userid) {
+    private function delete_request($item, $userid, $contextid) {
 
+        if (!gradebookservices::is_user_gradable_in_course($contextid, $userid)) {
+            throw new \Exception(null, 404);
+        }
         $grade = new \stdClass();
         $grade->userid = $userid;
         $grade->rawgrade = null;

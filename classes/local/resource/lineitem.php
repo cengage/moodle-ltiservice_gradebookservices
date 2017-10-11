@@ -89,7 +89,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 404);
             }
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
-                throw new \Exception(null, 401);
+                throw new \Exception(null, 403);
             }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
@@ -140,41 +140,61 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
     private function put_request($body, $olditem) {
         global $DB;
         $json = json_decode($body);
-        if (empty($json)) {
+        if (empty($json) ||
+                !isset($json->scoreMaximum) ||
+                !isset($json->label)) {
             throw new \Exception(null, 400);
         }
         $item = \grade_item::fetch(array('id' => $olditem->id, 'courseid' => $olditem->courseid));
         $gbs = gradebookservices::find_ltiservice_gradebookservice_for_lineitem($olditem->id);
         $updategradeitem = false;
         $upgradegradebookservices = false;
-        if (isset($json->label) && ($item->itemname !== $json->label)) {
-            $item->itemname = $json->label;
+        if ($item->itemname !== $json->label) {
             $updategradeitem = true;
         }
-        if (isset($json->scoreMaximum) &&
-                grade_floats_different(grade_floatval($item->grademax),
-                        grade_floatval($json->scoreMaximum))) {
-                            $item->grademax = grade_floatval($json->scoreMaximum);
+        $item->itemname = $json->label;
+        if (!is_numeric($json->scoreMaximum)) {
+            throw new \Exception(null, 400);
+        } else {
+            if (grade_floats_different(grade_floatval($item->grademax),
+                    grade_floatval($json->scoreMaximum))) {
+                $updategradeitem = true;
+            }
+            $item->grademax = grade_floatval($json->scoreMaximum);
+        }
+        $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
+        if ($item->idnumber !== $resourceid) {
             $updategradeitem = true;
         }
-        if (isset($json->resourceId) && ($item->idnumber !== $json->resourceId)) {
-            $item->idnumber = $json->resourceId;
-            $updategradeitem = true;
-        }
-        if (isset($json->tag) && ($gbs->tag !== $json->tag)) {
-            $gbs->tag = $json->tag;
+        $item->idnumber = $resourceid;
+        $tag = (isset($json->tag)) ? $json->tag : null;
+        if ($gbs->tag !== $tag) {
             $upgradegradebookservices = true;
         }
-        if (isset($json->resourceLinkId) && is_numeric($json->resourceLinkId) &&
-                intval($item->iteminstance) !== intval($json->resourceLinkId)) {
-            $item->iteminstance = intval($json->resourceLinkId);
-            $updategradeitem = true;
-            $upgradegradebookservices = true;
+
+        $gbs->tag = $tag;
+        if (isset($json->resourceLinkId)) {
+            if (is_numeric($json->resourceLinkId)) {
+                if (intval($item->iteminstance) !== intval($json->resourceLinkId)) {
+                    $updategradeitem = true;
+                    $upgradegradebookservices = true;
+                }
+                $item->iteminstance = intval($json->resourceLinkId);
+            } else {
+                throw new \Exception(null, 400);
+            }
+        } else {
+            if ($item->iteminstance !== null) {
+                $updategradeitem = true;
+                $upgradegradebookservices = true;
+            }
+            $item->iteminstance = null;
         }
-        if ($upgradegradebookservices) {
+
+        if ($upgradegradebookservices && ($item->iteminstance != null)) {
             if (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
                     $this->get_service()->get_tool_proxy()->id)) {
-                throw new \Exception(null, 404);
+                throw new \Exception(null, 403);
             }
         }
         if ($updategradeitem) {
