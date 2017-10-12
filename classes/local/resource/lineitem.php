@@ -167,31 +167,35 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             $updategradeitem = true;
         }
         $item->idnumber = $resourceid;
-        $tag = (isset($json->tag)) ? $json->tag : null;
-        if ($gbs->tag !== $tag) {
-            $upgradegradebookservices = true;
+        if ($gbs) {
+            $tag = (isset($json->tag)) ? $json->tag : null;
+            if ($gbs->tag !== $tag) {
+                $upgradegradebookservices = true;
+            }
+            $gbs->tag = $tag;
         }
-
-        $gbs->tag = $tag;
         if (isset($json->resourceLinkId)) {
             if (is_numeric($json->resourceLinkId)) {
                 if (intval($item->iteminstance) !== intval($json->resourceLinkId)) {
                     $updategradeitem = true;
-                    $upgradegradebookservices = true;
+                    if ($gbs) {
+                        $upgradegradebookservices = true;
+                    }
                 }
                 $item->iteminstance = intval($json->resourceLinkId);
             } else {
                 throw new \Exception(null, 400);
             }
-        } else {
-            if ($item->iteminstance !== null) {
-                $updategradeitem = true;
-                $upgradegradebookservices = true;
+        } else { // This should never happen if $gbs is false, but just in case let's avoid it.
+            if ($gbs) {
+                if ($item->iteminstance !== null) {
+                    $updategradeitem = true;
+                    $upgradegradebookservices = true;
+                }
+                $item->iteminstance = null;
             }
-            $item->iteminstance = null;
         }
-
-        if ($upgradegradebookservices && ($item->iteminstance != null)) {
+        if ($item->iteminstance != null) {
             if (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
                     $this->get_service()->get_tool_proxy()->id)) {
                 throw new \Exception(null, 403);
@@ -229,12 +233,21 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      * @param string $item       Grade item instance
      */
     private function delete_request($item) {
+        global $DB;
 
         $gradeitem = \grade_item::fetch(array('id' => $item->id, 'courseid' => $item->courseid));
+        if (($gbs = gradebookservices::find_ltiservice_gradebookservice_for_lineitem($item->id)) == false) {
+            throw new \Exception(null, 403);
+        }
         if (!$gradeitem->delete('mod/ltiservice_gradebookservices')) {
             throw new \Exception(null, 500);
+        } else {
+            $sqlparams = array();
+            $sqlparams['id'] = $gbs->id;
+            if (!$DB->delete_records('ltiservice_gradebookservices', $sqlparams)) {
+                throw new \Exception(null, 500);
+            }
         }
-
     }
 
     /**
