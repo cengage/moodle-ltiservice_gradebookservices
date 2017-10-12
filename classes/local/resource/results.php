@@ -91,6 +91,10 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
                 throw new \Exception(null, 403);
             }
+            if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
+                    $this->get_service()->get_tool_proxy()->id))) {
+                        throw new \Exception(null, 403);
+            }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':

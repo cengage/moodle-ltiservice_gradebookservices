@@ -358,14 +358,26 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      */
     public static function check_lti_id($linkid, $course, $toolproxy) {
         global $DB;
-
-        $sqlparams = array();
-        $sqlparams['linkid'] = $linkid;
-        $sqlparams['course'] = $course;
-        $sqlparams['toolproxy'] = $toolproxy;
-        $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
+        // Check if lti type is zero or not (comes from a backup)
+        $sqlparams1 = array();
+        $sqlparams1['linkid'] = $linkid;
+        $sqlparams1['course'] = $course;
+        $ltiactivity = $DB->get_record('lti', array('id' => $linkid, 'course' => $course));
+        if ($ltiactivity->typeid == 0) {
+            $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
+            if (!$tool) {
+                $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $course);
+            }
+            return (($tool) && ($toolproxy == $tool->toolproxyid));
+        } else {
+            $sqlparams2 = array();
+            $sqlparams2['linkid'] = $linkid;
+            $sqlparams2['course'] = $course;
+            $sqlparams2['toolproxy'] = $toolproxy;
+            $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
             lti.id=? and lti.course=?  and typ.toolproxyid=?';
-        return $DB->record_exists_sql($sql, $sqlparams);
+            return $DB->record_exists_sql($sql, $sqlparams2);
+        }
     }
 
     /**
