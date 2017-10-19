@@ -257,7 +257,6 @@ EOD;
         global $COURSE;
 
         $this->params['context_id'] = $COURSE->id;
-
         $value = str_replace('$LineItems.url', parent::get_endpoint(), $value);
 
         return $value;
