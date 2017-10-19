@@ -159,29 +159,20 @@ class result extends \mod_lti\local\ltiservice\resource_base {
      */
     public function parse_value($value) {
         global $COURSE, $USER, $CFG;
-
         require_once($CFG->libdir . '/gradelib.php');
 
-        $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
-        if ($item) {
-            $this->params['item_id'] = $item->items[0]->id;
-            $this->params['context_id'] = $COURSE->id;
-            $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
-            if (!empty($id)) {
-                $cm = get_coursemodule_from_id('lti', $id, 0, false);
-                if ($cm) {
-                    $id = $cm->instance;
-                }
-            }
-            $this->params['result_id'] = $USER->id;
-
-            $value = str_replace('$Result.url', parent::get_endpoint(), $value);
-
-            return $value;
-        } else {
-            return '';
+        $this->params['context_id'] = $COURSE->id;
+        $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
+        if (!empty($id)) {
+            $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
+            $id = $cm->instance;
         }
-
+        $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
+        if ($item && $item->items) {
+            $this->params['item_id'] = $item->items[0]->id;
+        }
+        $this->params['result_id'] = $USER->id;
+        $value = str_replace('$Result.url', parent::get_endpoint(), $value);
+        return $value;
     }
-
 }
