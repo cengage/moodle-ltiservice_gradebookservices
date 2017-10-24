@@ -232,13 +232,17 @@ class score extends \mod_lti\local\ltiservice\resource_base {
 
         $this->params['context_id'] = $COURSE->id;
         $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
-        if (!empty($id)) {
-            $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
-            $id = $cm->instance;
-        }
-        $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
-        if ($item && $item->items) {
-            $this->params['item_id'] = $item->items[0]->id;
+        try {
+            if (!empty($id)) {
+                $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
+                $id = $cm->instance;
+            }
+            $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
+            if ($item && $item->items) {
+                $this->params['item_id'] = $item->items[0]->id;
+            }
+        } catch (\Exception $e) {
+            $this->params['item_id'] = 0;
         }
         $this->params['result_id'] = $USER->id;
         $value = str_replace('$Score.url', parent::get_endpoint(), $value);
