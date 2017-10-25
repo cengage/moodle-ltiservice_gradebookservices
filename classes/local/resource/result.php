@@ -159,24 +159,28 @@ class result extends \mod_lti\local\ltiservice\resource_base {
      */
     public function parse_value($value) {
         global $COURSE, $USER, $CFG;
-        require_once($CFG->libdir . '/gradelib.php');
 
-        $this->params['context_id'] = $COURSE->id;
-        $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
-        try {
-            if (!empty($id)) {
-                $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
-                $id = $cm->instance;
+        if (strpos($value, '$Result.url') !== false) {
+            require_once($CFG->libdir . '/gradelib.php');
+
+            $this->params['context_id'] = $COURSE->id;
+            $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
+            try {
+                if (!empty($id)) {
+                    $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
+                    $id = $cm->instance;
+                }
+                $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
+                if ($item && $item->items) {
+                    $this->params['item_id'] = $item->items[0]->id;
+                }
+            } catch (\Exception $e) {
+                $this->params['item_id'] = 0;
             }
-            $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
-            if ($item && $item->items) {
-                $this->params['item_id'] = $item->items[0]->id;
-            }
-        } catch (\Exception $e) {
-            $this->params['item_id'] = 0;
+            $this->params['result_id'] = $USER->id;
+            $value = str_replace('$Result.url', parent::get_endpoint(), $value);
         }
-        $this->params['result_id'] = $USER->id;
-        $value = str_replace('$Result.url', parent::get_endpoint(), $value);
+
         return $value;
     }
 }
