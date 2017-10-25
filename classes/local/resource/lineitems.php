@@ -256,8 +256,10 @@ EOD;
     public function parse_value($value) {
         global $COURSE;
 
-        $this->params['context_id'] = $COURSE->id;
-        $value = str_replace('$LineItems.url', parent::get_endpoint(), $value);
+        if (strpos($value, '$LineItems.url') !== false) {
+            $this->params['context_id'] = $COURSE->id;
+            $value = str_replace('$LineItems.url', parent::get_endpoint(), $value);
+        }
 
         return $value;
 
