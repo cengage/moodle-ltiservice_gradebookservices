@@ -276,7 +276,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $lineitem->id = "{$endpoint}/{$item->id}/lineitem";
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
-        $lineitem->idnumber = (!empty($item->idnumber)) ? $item->idnumber : '';
+        $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
         $lineitem->results = "{$endpoint}/{$item->id}/results";
         $lineitem->scores = "{$endpoint}/{$item->id}/scores";
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
