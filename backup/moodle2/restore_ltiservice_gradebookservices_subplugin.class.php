@@ -98,7 +98,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         $courseid = $this->task->get_courseid();
         try {
             $sql = 'SELECT * FROM {grade_items} gi
-                    INNER JOIN {ltiservice_gradebookservices} gbs where gbs.id = gi.itemnumber
+                    INNER JOIN {ltiservice_gradebookservices} gbs ON gbs.id = gi.itemnumber
                     AND courseid =? and gbs.previousid=?';
             $conditions = array('courseid' => $courseid, 'previousid' => $data->itemnumber);
             // We will check if the record has been restored by a previous activity
