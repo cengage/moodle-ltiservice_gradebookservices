@@ -210,7 +210,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             try {
                 $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array('id' => $gbs->id,
                      'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                     'resourcelinkid' => $item->iteminstance,
+                     'ltilinkid' => $item->iteminstance,
                      'tag' => $gbs->tag
                 ));
             } catch (\Exception $e) {
