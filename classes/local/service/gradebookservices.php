@@ -443,12 +443,12 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             if ($gradeitem->iteminstance) {
                 if (isset($gradeitem->itemnumber)) {
                     $gbs1 = $DB->get_record('ltiservice_gradebookservices',
-                            array('id' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                            array('id' => $gradeitem->itemnumber, 'ltilinkid' => $gradeitem->iteminstance));
                     if ($gbs1) {
                         return $gbs1;
                     } else {
                         $gbs2 = $DB->get_record('ltiservice_gradebookservices',
-                                array('previousid' => $gradeitem->itemnumber, 'resourcelinkid' => $gradeitem->iteminstance));
+                                array('previousid' => $gradeitem->itemnumber, 'ltilinkid' => $gradeitem->iteminstance));
                         if ($gbs2) {
                             return $gbs2;
                         } else {

@@ -76,7 +76,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                     'toolproxyid' => $newtoolproxyid,
-                    'resourcelinkid' => $this->get_new_parentid('lti'),
+                    'ltilinkid' => $this->get_new_parentid('lti'),
                     'tag' => $data->tag,
                     'previousid' => $data->itemnumber
             ));
@@ -108,7 +108,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
                 // Restore the lineitem.
                 $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                         'toolproxyid' => $newtoolproxyid,
-                        'resourcelinkid' => null,
+                        'ltilinkid' => null,
                         'tag' => $data->tag,
                         'previousid' => $data->itemnumber
                 ));

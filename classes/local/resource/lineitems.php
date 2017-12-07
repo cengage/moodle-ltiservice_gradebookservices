@@ -216,8 +216,8 @@ EOD;
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                 'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                    'resourcelinkid' => $ltilinkid,
-                    'tag' => $tag
+                'ltilinkid' => $ltilinkid,
+                'tag' => $tag
             ));
         } catch (\Exception $e) {
             throw new \Exception(null, 500);
