@@ -11,7 +11,7 @@ require_once 'HTTP/Request2.php';
 // help: If 'help=true' it will display this help.
 //
 // Needs to be called with this format
-// php-cgi -q GradebookServicesTest.php course=2 lineitem=411 userid=3 userid2=4 resourcelinkid=123  test=1
+// php-cgi -q GradebookServicesTest.php course=2 lineitem=411 userid=3 userid2=4 ltilinkid=123  test=1
 // Where this parameters are mandatory: 
 // NOTE: If your specific test doesn't use them, just add some number.
 //
@@ -20,7 +20,7 @@ require_once 'HTTP/Request2.php';
 // lineitem: The lineitem id (grade_item id) that we will use for the tests
 // userid: One student in the course (we need the numeric id)
 // userid2: Other student in the course (we need the numeric id)
-// resourcelinkid: the id or an lti activity related with our proxy. the id's can be seen in mdl_lti table
+// ltilinkid: the id or an lti activity related with our proxy. the id's can be seen in mdl_lti table
 //
 // Some extra parameters are needed in specific tests:
 // lineitemnoproxy: Is only needed for test 4, and it refers to a lineitem that doesn't belongs to our proxy
@@ -52,7 +52,7 @@ echo "help: If 'help=true' it will display this help.\n\n";
 
 
 echo "Needs to be called with this format: \n\n";
-echo "php-cgi -q GradebookServicesTest.php help=false course=2 lineitem=411 userid=3 userid2=4 resourcelinkid=123  test=1 \n\n";
+echo "php-cgi -q GradebookServicesTest.php help=false course=2 lineitem=411 userid=3 userid2=4 ltilinkid=123  test=1 \n\n";
 echo "Where this parameters are mandatory: \n";
 echo "NOTE: If your specific test doesn't use them, just add some number. \n\n";
 echo "help: If help is true it will display this help  \n";
@@ -61,7 +61,7 @@ echo "course: the id of the course where we are testing.  \n";
 echo "lineitem: The lineitem id (grade_item id) that we will use for the tests \n";
 echo "userid: One student in the course (we need the numeric id) \n";
 echo "userid2: Other student in the course (we need the numeric id) \n";
-echo "resourcelinkid: the id or an lti activity related with our proxy. the id's can be seen in mdl_lti table \n\n";
+echo "ltilinkid: the id or an lti activity related with our proxy. the id's can be seen in mdl_lti table \n\n";
 echo "Some extra parameters are needed in specific tests: \n";
 echo "lineitemnoproxy: Is only needed for test 4, and it refers to a lineitem that doesn't belongs to our proxy \n";
 echo "These one are just needed for test 15 to 22 :    \n";
@@ -104,8 +104,8 @@ $course_id = $_GET['course'];
 $lineitem_id = $_GET['lineitem'];
 $result_id = $_GET['userid'];
 $result_id2 = $_GET['userid2'];
-$resource_link_id_put=$_GET['resourcelinkid'];
-$resource_link_id_post=$_GET['resourcelinkid'];
+$lti_link_id_put=$_GET['ltilinkid'];
+$lti_link_id_post=$_GET['ltilinkid'];
 
 
 /////////////////////////////
@@ -119,8 +119,8 @@ $resource_link_id_post=$_GET['resourcelinkid'];
 // ?limit=5
 // ?limit=5&from=2      (from record offset, if provided, limit must be specified)
 // ?resource_id=999     (filter for line items associated with specific TP resource ID)
-// ?resource_link_id=1  (filter for line items associated with specific TC resource link ID)
-//$line_items_query_string='?resource_link_id=6&limit=4&from=2&resource_id=999';
+// ?lti_link_id=1  (filter for line items associated with specific TC resource link ID)
+//$line_items_query_string='?lti_link_id=6&limit=4&from=2&resource_id=999';
 //$line_items_query_string='?limit=1&from=1';
 
 // SCORES PAGING 
@@ -208,13 +208,13 @@ $postdata_false = null;
 
 $postdata_lineitems_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","tag":"lmsint-grade"}';
 
-$postdata_lineitems_resource_link_id_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","resourceLinkId":"'.$resource_link_id_post.'","tag":"lmsint-grade"}';
+$postdata_lineitems_lti_link_id_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","ltiLinkId":"'.$lti_link_id_post.'","tag":"lmsint-grade"}';
 
 $postdata_lineitem_put = '{"scoreMaximum":'.
 $line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","tag":"lmsint-grade"}';
 
-$postdata_lineitem_resource_link_id_put = '{"scoreMaximum":'.
-$line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","resourceLinkId":"'.$resource_link_id_put.'","tag":"lmsint-grade"}';
+$postdata_lineitem_lti_link_id_put = '{"scoreMaximum":'.
+        $line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","ltiLinkId":"'.$lti_link_id_put.'","tag":"lmsint-grade"}';
 
 $postdata_lineitems_delete = null;
 
@@ -308,7 +308,7 @@ TEST #1  Try to post a lineitem in a course that doesn’t exists
 EXPECTED: 404
 TEST #2  Try to post a lineitem with each of the mandatory parameters missing
 EXPECTED: EXPECTED RESULT: 400, in 'all', 'scoremaximum' and 'lable', and 201 in the others
-TEST #3  Try to post a lineitem with the parametes with a wrong value (scoreMaximum,  resourceLinkId)
+TEST #3  Try to post a lineitem with the parametes with a wrong value (scoreMaximum,  ltiLinkId)
 EXPECTED: 400 and 403
 */
 
@@ -339,12 +339,12 @@ EXPECTED: 400 and 403
     call_service('POST LINEITEMS Missing resourceid', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_post_error_missing_resourceid, $consumer_key, $secret);            
 
 
-$postdata_lineitems_resource_link_id_post_error = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","resourceLinkId":"1000000","tag":"lmsint-grade"}';
+    $postdata_lineitems_lti_link_id_post_error = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","ltiLinkId":"1000000","tag":"lmsint-grade"}';
 
         echo "TEST 2.3: Try to post a lineitem with the parametes with a wrong value (scoreMaximum) \n";
         echo "EXPECTED RESULT: 400 \n";
     call_service('POST LINEITEMS error scoreMaximum ', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_post_error_bad_value, $consumer_key, $secret);
-    call_service('POST LINEITEMS error resourceLinkId', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_resource_link_id_post_error, $consumer_key, $secret);    
+    call_service('POST LINEITEMS error ltiLinkId', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_lti_link_id_post_error, $consumer_key, $secret);    
 
 
 }
@@ -393,9 +393,9 @@ EXPECTED: 200, Empty lineitems list
         echo "EXPECTED RESULT:  200 return the lineitems list with the lineitem added in test 3.1 and 3.2 \n";    
     call_service('GET LINEITEMS', $url_lineitems, $http_method_get, $lineitemcontainer_content, $postdata_false, $consumer_key, $secret);    
     
-        echo "TEST 3.5: Try to post another lineitem with linked to an LTI activity, to do this we need the resourcelinkid parameter with the id of a valid lti activity in the course \n";
+        echo "TEST 3.5: Try to post another lineitem with linked to an LTI activity, to do this we need the ltilinkid parameter with the id of a valid lti activity in the course \n";
         echo "EXPECTED RESULT:  201 return the lineitem added \n";
-    call_service('POST LINEITEMS', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_resource_link_id_post, $consumer_key, $secret);
+        call_service('POST LINEITEMS', $url_lineitems, $http_method_post, $lineitem_content, $postdata_lineitems_lti_link_id_post, $consumer_key, $secret);
 
     echo "TEST 3.6: Try to get the lineitems of the course \n";
         echo "EXPECTED RESULT:  200 return the lineitems list with the lineitem added in test 3.1 and 3.2 \n";    
@@ -420,8 +420,8 @@ EXPECTED: 200, Empty lineitems list
     call_service('GET LINEITEMS', $url_lineitems39, $http_method_get, $lineitemcontainer_content, $postdata_false, $consumer_key, $secret);    
 
     echo "TEST 3.10: Try to get the lineitems of the course filtering by lti activity id \n";
-        echo "EXPECTED RESULT:  200 return the lineitems list with the lineitems where resource_link_id='.$resource_link_id_post.' \n";    
-    $line_items_query_string='?resource_link_id='.$resource_link_id_post;
+    echo "EXPECTED RESULT:  200 return the lineitems list with the lineitems where lti_link_id='.$lti_link_id_post.' \n";    
+    $line_items_query_string='?lti_link_id='.$lti_link_id_post;
     $url_lineitems310 = $url_lineitems . $line_items_query_string;    
     call_service('GET LINEITEMS', $url_lineitems310, $http_method_get, $lineitemcontainer_content, $postdata_false, $consumer_key, $secret);    
 
@@ -490,9 +490,9 @@ EXPECTED: 403
     call_service('GET LINEITEM',$url_lineitem, $http_method_get, $lineitem_content, $postdata_false, $consumer_key, $secret);
     call_service('PUT LINEITEM missing tag',$url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_put_error_missing_tag, $consumer_key, $secret);
     call_service('GET LINEITEM',$url_lineitem, $http_method_get, $lineitem_content, $postdata_false, $consumer_key, $secret);
-    call_service('PUT LINEITEM with resourcelinkid',$url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_resource_link_id_put, $consumer_key, $secret);
+    call_service('PUT LINEITEM with ltilinkid',$url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_lti_link_id_put, $consumer_key, $secret);
     call_service('GET LINEITEM',$url_lineitem, $http_method_get, $lineitem_content, $postdata_false, $consumer_key, $secret);
-    call_service('PUT LINEITEM missing resourcelinkid',$url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_put_error_missing_link_set_before, $consumer_key, $secret);
+    call_service('PUT LINEITEM missing ltilinkid',$url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_put_error_missing_link_set_before, $consumer_key, $secret);
     call_service('GET LINEITEM',$url_lineitem, $http_method_get, $lineitem_content, $postdata_false, $consumer_key, $secret);
 
     echo "TEST 4.5: Try to put a lineitem with each of the parametes with a wrong value (where that is possible) \n";
@@ -515,7 +515,7 @@ EXPECTED: 403
 
     echo "TEST 4.9: Try to put a lineitem that doesn’t belongs to our proxy \n";
         echo "EXPECTED RESULT:  403 \n";
-    call_service('PUT LINEITEM',$url_lineitem_no_proxy,$http_method_put,$lineitem_content,$postdata_lineitem_resource_link_id_put, $consumer_key, $secret);
+        call_service('PUT LINEITEM',$url_lineitem_no_proxy,$http_method_put,$lineitem_content,$postdata_lineitem_lti_link_id_put, $consumer_key, $secret);
 
     echo "TEST 4.10: Try to delete a lineitem that doesn’t belongs to our proxy \n";
         echo "EXPECTED RESULT:  403 \n";

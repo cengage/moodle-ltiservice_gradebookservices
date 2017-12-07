@@ -174,15 +174,15 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             }
             $gbs->tag = $tag;
         }
-        if (isset($json->resourceLinkId)) {
-            if (is_numeric($json->resourceLinkId)) {
-                if (intval($item->iteminstance) !== intval($json->resourceLinkId)) {
+        if (isset($json->ltiLinkId)) {
+            if (is_numeric($json->ltiLinkId)) {
+                if (intval($item->iteminstance) !== intval($json->ltiLinkId)) {
                     $updategradeitem = true;
                     if ($gbs) {
                         $upgradegradebookservices = true;
                     }
                 }
-                $item->iteminstance = intval($json->resourceLinkId);
+                $item->iteminstance = intval($json->ltiLinkId);
             } else {
                 throw new \Exception(null, 400);
             }

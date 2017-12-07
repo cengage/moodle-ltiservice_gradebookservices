@@ -55,10 +55,10 @@ $query_score_get = false;
 //IDS
 $course_id = '3';
 $lineitem_id = '58';
-$use_resource_link_id_post=true; //To decide if we will create a decoupled or coupled lineitem
-$resource_link_id_post=1;
-$use_resource_link_id_put=false; //To decide if we will create a decoupled or coupled lineitem
-$resource_link_id_put=1;
+$use_lti_link_id_post=true; //To decide if we will create a decoupled or coupled lineitem
+$lti_link_id_post=1;
+$use_lti_link_id_put=false; //To decide if we will create a decoupled or coupled lineitem
+$lti_link_id_put=1;
 $score_score_of_post = "5";
 $score_score_of_put = "5";
 $score_score_of_delete = "5";
@@ -77,8 +77,8 @@ $resource_id_put='0000000000002';
 // ?limit=5
 // ?limit=5&from=1      (from record offset, if provided, limit must be specified)
 // ?resource_id=999     (filter for line items associated with specific TP resource ID)
-// ?resource_link_id=1  (filter for line items associated with specific TC resource link ID)
-//$line_items_query_string='?resource_link_id=1&limit=2&from=1&resource_id=0000000000001';
+// ?lti_link_id=1  (filter for line items associated with specific TC resource link ID)
+//$line_items_query_string='?lti_link_id=1&limit=2&from=1&resource_id=0000000000001';
 //$line_items_query_string='?limit=1';
 //SCORES
 $score_result_user_id='4';
@@ -124,13 +124,13 @@ $postdata_false = null; //Don't change this one
 
 $postdata_lineitems_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","tag":"lmsint-grade"}';
 
-$postdata_lineitems_resource_link_id_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","resourceLinkId":"'.$resource_link_id_post.'","tag":"lmsint-grade"}';
+$postdata_lineitems_lti_link_id_post = '{"scoreMaximum":'.$line_item_score_maximum_post.',"label":"'.$item_label_post.'","resourceId":"'.$resource_id_post.'","ltiLinkId":"'.$lti_link_id_post.'","tag":"lmsint-grade"}';
 
 $postdata_lineitem_put = '{"scoreMaximum":'.
 $line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","tag":"lmsint-grademod"}';
 
-$postdata_lineitem_resource_link_id_put = '{"scoreMaximum":'.
-$line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","resourceLinkId":"'.$resource_link_id_put.'","tag":"lmsint-grade"}';
+$postdata_lineitem_lti_link_id_put = '{"scoreMaximum":'.
+        $line_item_score_maximum_put.',"label":"'.$item_label_put.'","resourceId":"'.$resource_id_put.'","ltiLinkId":"'.$lti_link_id_put.'","tag":"lmsint-grade"}';
 
 $postdata_lineitems_delete = null;
 
@@ -208,8 +208,8 @@ echo "\n";
 echo $postdata_lineitems_post;
 echo "\n";
 echo "\n";
-if($use_resource_link_id_post){
-call_service($url_lineitems,$http_method_post,$lineitem_content,$postdata_lineitems_resource_link_id_post, $consumer_key, $secret);
+if($use_lti_link_id_post){
+    call_service($url_lineitems,$http_method_post,$lineitem_content,$postdata_lineitems_lti_link_id_post, $consumer_key, $secret);
 }else{
 call_service($url_lineitems,$http_method_post,$lineitem_content,$postdata_lineitems_post, $consumer_key, $secret);
 }
@@ -240,8 +240,8 @@ echo "\n";
 echo $postdata_lineitem_put;
 echo "\n";
 echo "\n";
-if($use_resource_link_id_put){
-call_service($url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_resource_link_id_put, $consumer_key, $secret);
+if($use_lti_link_id_put){
+    call_service($url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_lti_link_id_put, $consumer_key, $secret);
 }else{
 call_service($url_lineitem,$http_method_put,$lineitem_content,$postdata_lineitem_put, $consumer_key, $secret);
 }
