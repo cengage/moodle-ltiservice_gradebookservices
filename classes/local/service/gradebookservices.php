@@ -80,13 +80,13 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @param string $courseid       ID of course
      * @param string $resourceid     Resource identifier used for filtering, may be null
-     * @param string $resourcelinkid Resource Link identifier used for filtering, may be null
+     * @param string $ltilinkid Resource Link identifier used for filtering, may be null
      * @param int    $limitfrom      Offset for the first line item to include in a paged set
      * @param int    $limitnum       Maximum number of line items to include in the paged set
      *
      * @return array
      */
-    public function get_lineitems($courseid, $resourceid, $resourcelinkid, $limitfrom, $limitnum) {
+    public function get_lineitems($courseid, $resourceid, $ltilinkid, $limitfrom, $limitnum) {
         global $DB;
 
         // Select all lti potential linetiems in site.
@@ -100,9 +100,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             $optionalfilters .= " AND (i.idnumber = :resourceid)";
             $params['resourceid'] = $resourceid;
         }
-        if (isset($resourcelinkid)) {
-            $optionalfilters .= " AND (i.iteminstance = :resourcelinkid)";
-            $params['resourcelinkid'] = $resourcelinkid;
+        if (isset($ltilinkid)) {
+            $optionalfilters .= " AND (i.iteminstance = :ltilinkid)";
+            $params['ltilinkid'] = $ltilinkid;
         }
 
         $sql = "SELECT i.*
@@ -281,7 +281,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $lineitem->scores = "{$endpoint}/{$item->id}/scores";
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
-            $lineitem->resourceLinkId = strval($item->iteminstance);
+            $lineitem->ltiLinkId= strval($item->iteminstance);
         }
         $json = json_encode($lineitem, JSON_UNESCAPED_SLASHES);
 

@@ -93,7 +93,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
-                    $resourcelinkid = optional_param('resource_link_id', null, PARAM_TEXT);
+                    $ltilinkid= optional_param('lti_link_id', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -103,10 +103,10 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
 
-                    $items = $this->get_service()->get_lineitems($contextid, $resourceid, $resourcelinkid, $limitfrom,
+                    $items = $this->get_service()->get_lineitems($contextid, $resourceid, $ltilinkid, $limitfrom,
                         $limitnum);
 
-                    $json = $this->get_request_json($contextid, $items, $resourceid, $resourcelinkid, $limitfrom,
+                    $json = $this->get_request_json($contextid, $items, $resourceid, $ltilinkid, $limitfrom,
                         $limitnum);
 
                     $response->set_content_type($this->formats[0]);
@@ -133,13 +133,13 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param string $contextid      Course ID
      * @param array  $items          Array of lineitems
      * @param string $resourceid     Resource identifier used for filtering, may be null
-     * @param string $resourcelinkid Resource Link identifier used for filtering, may be null
+     * @param string $ltilinkid Resource Link identifier used for filtering, may be null
      * @param int    $limitfrom      Offset of the first line item to return
      * @param int    $limitnum       Maximum number of line items to return, ignored if zero or less
      *
      * return string
      */
-    private function get_request_json($contextid, $items, $resourceid, $resourcelinkid, $limitfrom, $limitnum) {
+    private function get_request_json($contextid, $items, $resourceid, $ltilinkid, $limitfrom, $limitnum) {
 
         if (isset($limitnum) && $limitnum > 0) {
             if (count($items) == $limitnum) {
@@ -148,8 +148,8 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 if (isset($resourceid)) {
                     $nextpage .= "&resource_id={$resourceid}";
                 }
-                if (isset($resourcelinkid)) {
-                    $nextpage .= "&resource_link_id={$resourcelinkid}";
+                if (isset($ltilinkid)) {
+                    $nextpage .= "&lti_link_id={$ltilinkid}";
                 }
             }
         }
@@ -206,9 +206,9 @@ EOD;
         }
         require_once($CFG->libdir.'/gradelib.php');
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
-        $resourcelinkid = (isset($json->resourceLinkId)) ? $json->resourceLinkId : null;
-        if ($resourcelinkid != null) {
-            if (!gradebookservices::check_lti_id($resourcelinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
+        $ltilinkid= (isset($json->ltiLinkId)) ? $json->ltiLinkId: null;
+        if ($ltilinkid!= null) {
+            if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
                 throw new \Exception(null, 403);
             }
         }
@@ -216,7 +216,7 @@ EOD;
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                 'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                    'resourcelinkid' => $resourcelinkid,
+                    'resourcelinkid' => $ltilinkid,
                     'tag' => $tag
             ));
         } catch (\Exception $e) {
@@ -234,8 +234,8 @@ EOD;
         $item->itemmodule = 'lti';
         $item->itemnumber = $gradebookservicesid;
         $item->idnumber = $resourceid;
-        if (isset($json->resourceLinkId) && is_numeric($json->resourceLinkId)) {
-            $item->iteminstance = $json->resourceLinkId;
+        if (isset($json->ltiLinkId) && is_numeric($json->ltiLinkId)) {
+            $item->iteminstance = $json->ltiLinkId;
         }
         $id = $item->insert('mod/ltiservice_gradebookservices');
         $json->id = parent::get_endpoint() . "/{$id}/lineitem";
