@@ -207,15 +207,15 @@ EOD;
             $resolved = '';
             $this->params['context_id'] = $COURSE->id;
             $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
-                if (!empty($id)) {
-                    $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
-                    $id = $cm->instance;
-                    $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
-                    if ($item && $item->items) {
-                        $this->params['item_id'] = $item->items[0]->id;
-                        $resolved = parent::get_endpoint();
-                    }
+            if (!empty($id)) {
+                $cm = get_coursemodule_from_id('lti', $id, 0, false, MUST_EXIST);
+                $id = $cm->instance;
+                $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
+                if ($item && $item->items) {
+                    $this->params['item_id'] = $item->items[0]->id;
+                    $resolved = parent::get_endpoint();
                 }
+            }
             $value = str_replace('$Results.url', $resolved, $value);
         }
 

@@ -59,12 +59,11 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     public function get_resources() {
 
         // The containers should be ordered in the array after their elements.
-        // Lineitems should be after lineitem and scores should be after score.
+        // Lineitems should be after lineitem.
         if (empty($this->resources)) {
             $this->resources = array();
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitem($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\result($this);
-            $this->resources[] = new \ltiservice_gradebookservices\local\resource\score($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitems($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\results($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\scores($this);
@@ -281,7 +280,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $lineitem->scores = "{$endpoint}/{$item->id}/scores";
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
-            $lineitem->ltiLinkId= strval($item->iteminstance);
+            $lineitem->ltiLinkId = strval($item->iteminstance);
         }
         $json = json_encode($lineitem, JSON_UNESCAPED_SLASHES);
 
@@ -320,35 +319,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     }
 
     /**
-     * Get the JSON representation of the grade.
-     *
-     * @param object  $grade              Grade record
-     * @param string  $endpoint           Endpoint for lineitem
-     *
-     * @return string
-     */
-    public static function score_to_json($grade, $endpoint) {
-
-        $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
-        $id = "{$endpoint}/scores/{$grade->userid}/score";
-        $result = new \stdClass();
-        $result->id = $id;
-        $result->userId = $grade->userid;
-        $result->scoreGiven = $grade->finalgrade;
-        $result->scoreMaximum = intval($grade->rawgrademax);
-        if (!empty($grade->feedback)) {
-            $result->comment = $grade->feedback;
-        }
-        // TODO: activityProgress, gradingProgress; might just skip 'em as Moodle corollaries aren't obvious.
-        $result->scoreOf = $endpoint;
-        $result->timestamp = date('c', $grade->timemodified);
-        $json = json_encode($result, JSON_UNESCAPED_SLASHES);
-
-        return $json;
-
-    }
-
-    /**
      * Check if an LTI id is valid.
      *
      * @param string $linkid             The lti id
@@ -358,7 +328,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      */
     public static function check_lti_id($linkid, $course, $toolproxy) {
         global $DB;
-        // Check if lti type is zero or not (comes from a backup)
+        // Check if lti type is zero or not (comes from a backup).
         $sqlparams1 = array();
         $sqlparams1['linkid'] = $linkid;
         $sqlparams1['course'] = $course;

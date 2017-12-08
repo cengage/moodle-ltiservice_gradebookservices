@@ -143,13 +143,10 @@ $lti_link_id_post=$_GET['ltilinkid'];
 
 //Initialized, Started, InProgress, Submitted, Completed
 $score_activity_progress_post = "Completed";
-$score_activity_progress_put = "Completed";
 
 //FullyGraded, Pending, PendingManual, Failed, NotReady
 $score_progress_post = "FullyGraded";
 $score_progress_post_non_fully_graded = "Pending";
-$score_progress_put = "FullyGraded";
-$score_progress_put_non_fully_graded = "Pending";
 
 
 //////////////////
@@ -159,7 +156,6 @@ $score_progress_put_non_fully_graded = "Pending";
 //These doesn't need to change.
 $lineitem_content = 'application/vnd.ims.lis.v2.lineitem+json';
 $lineitemcontainer_content = 'application/vnd.ims.lis.v2.lineitemcontainer+json';
-$score_content = 'application/vnd.ims.lis.v1.score+json';
 $scorecontainer_content = 'application/vnd.ims.lis.v1.scorecontainer+json';
 $result_content = 'application/vnd.ims.lis.v2.result+json';
 $resultcontainer_content = 'application/vnd.ims.lis.v1.resultcontainer+json';
@@ -190,13 +186,9 @@ $resource_id_put='0000000000002';
 
 //SCORES
 $score_score_given_post = '5';
-$score_score_given_put = '15';
 $score_score_maximum_post = '10';
-$score_score_maximum_put = '50';
 $score_comment_post = "Very Bad job";
-$score_comment_put = "Real Good job";
 $score_timestamp_post=date('c',time());
-$score_timestamp_put=date('c',time());
 
 
 //////////////////////////
@@ -228,13 +220,6 @@ $score_score_maximum_post.',"comment":"'.$score_comment_post.'","activityProgres
 $postdata_scores_post_non_fully_graded = '{"scoreGiven":'.$score_score_given_post.',"scoreMaximum":'.
 $score_score_maximum_post.',"comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post_non_fully_graded.'","timestamp":"'.$score_timestamp_post.'","userId":"'.$result_id.'"}';
 
-$postdata_score_put = '{"scoreGiven":'.$score_score_given_put.',"scoreMaximum":'.
-$score_score_maximum_put.',"comment":"'.$score_comment_put.'","activityProgress":"'.$score_activity_progress_put.'","gradingProgress":"'.$score_progress_put.'","timestamp":"'.$score_timestamp_put.'"}';
-
-$postdata_score_put_non_fully_graded = '{"scoreGiven":'.$score_score_given_put.',"scoreMaximum":'.
-$score_score_maximum_put.',"comment":"'.$score_comment_put.'","activityProgress":"'.$score_activity_progress_put.'","gradingProgress":"'.$score_progress_put_non_fully_graded.'","timestamp":"'.$score_timestamp_put.'"}';
-
-$postdata_score_delete = null;
 
 //Result and results are just a get
 
@@ -254,7 +239,6 @@ $url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores';
 if (!empty($scores_query_string)) {
   $url_scores = $url_scores . $scores_query_string;
 }
-$url_score = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores/'. $result_id .'/score';
 $url_result = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/'. $result_id .'/result';
 $url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results';
 if (!empty($results_query_string)) {
@@ -704,137 +688,6 @@ EXPECTED: 201 return the result
 
 }
 
-if ($test_number==8){
-
-/* TEST 8: SCORE: ERROR TESTS with GET/PUT/DELETE
-TEST #1  Try to put a score in a course that doesn’t exists
-EXPECTED: 404
-TEST #2  Try to put a score in a lineitem that doesn’t exists
-EXPECTED: 404
-TEST #3  Try to put a score for a user that doesn’t exists or is not enrolled in the course
-EXPECTED: 404
-TEST #4  Try to put a score with each of the mandatory parameters missing
-EXPECTED: 400 when missing 'All', 'userid', 'activity progress' and 'gradingprogress', 200/201 with score=0 in GivingScore and 200/201 with scoreMaximum=1 in scoreMaximum, and 200/201 in comment (but due to moodle code, the comment won't be removed...) 
-TEST #5  Try to put a score with each of the parametes with a wrong value (where that is possible)
-EXPECTED: 400
-TEST #6  Try to delete a score in a course that doesn’t exists
-EXPECTED: 404
-TEST #7  Try to delete a score in a lineitem that doesn’t exists
-EXPECTED: 404
-TEST #8  Try to delete a score in for a user that doesn’t exists or is not enrolled in the course
-EXPECTED: 404
-TEST #9  Try to get a score
-EXPECTED: 405
-*/
-
-$url_score_test1 = $base_url .'100000/lineitems/' . $lineitem_id . '/scores/'. $result_id .'/score';
-$url_score_test2 = $base_url . $course_id . '/lineitems/150000/scores/'. $result_id .'/score';
-$url_score_test3 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores/150000/score';
-
-$postdata_score_put_error_missing = '{}';
-
-$postdata_score_put_bad_value1 = '{"scoreGiven":"ASgggDFKKF","scoreMaximum":'.
-$score_score_maximum_put.',"comment":"'.$score_comment_put.'","activityProgress":"'.$score_activity_progress_put.'","gradingProgress":"'.$score_progress_put.'","timestamp":"'.$score_timestamp_put.'"}';
-
-
-$postdata_scores_put_error_bad_value2 = '{"scoreGiven":"10","scoreMaximum":"ASDFKKF","comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"'.$score_timestamp_put.'","userId":"'.$result_id.'"}';
-
-$postdata_scores_put_error_bad_value3 = '{"scoreGiven":"10","scoreMaximum":"50","comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"97987899879","userId":"'.$result_id.'"}';
-
-$postdata_scores_put_error_bad_value4 = '{"scoreGiven":"10","scoreMaximum":"50","comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"2011-09-11T09:38:26-06:00","userId":"'.$result_id.'"}';
-
-$postdata_scores_put_error_bad_value5 = '{"scoreGiven":"10","scoreMaximum":"50","comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"'.$score_timestamp_put.'","userId":"18000000"}';
-
-
-    echo "TEST 8.1: Try to put a score in a course that doesn’t exists \n";
-        echo "EXPECTED RESULT: 404 \n";
-    call_service('PUT SCORE', $url_score_test1, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 8.2:  Try to put a score in a lineitem that doesn’t exists \n";
-        echo "EXPECTED RESULT: 404 \n";
-    call_service('PUT SCORE', $url_score_test2, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-    
-    echo "TEST 8.3: Try to put a score for a user that doesn’t exists or is not enrolled in the course (bad user in the url) \n";
-        echo "EXPECTED RESULT: 400 \n";
-    call_service('PUT SCORE', $url_score_test3, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 8.4: Try to put a score with each of the mandatory parameters missing \n";
-        echo "EXPECTED RESULT: 400 \n";
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put_error_missing, $consumer_key, $secret);    
-    
-    echo "TEST 8.5: Try to put a score with each of the parametes with a wrong value (where that is possible) \n";
-        echo "EXPECTED RESULT: 400 \n";
-    call_service('PUT SCORE bad ScoreGiven', $url_score, $http_method_put, $score_content, $postdata_score_put_bad_value1, $consumer_key, $secret);
-    call_service('PUT SCORE bad Score Maximum', $url_score, $http_method_put, $score_content, $postdata_scores_put_error_bad_value2, $consumer_key, $secret);
-    call_service('PUT SCORE bad date format', $url_score, $http_method_put, $score_content, $postdata_scores_put_error_bad_value3, $consumer_key, $secret);
-    call_service('PUT SCORE older date', $url_score, $http_method_put, $score_content, $postdata_scores_put_error_bad_value4, $consumer_key, $secret);    
-    call_service('PUT SCORE different user id than in the URL', $url_score, $http_method_put, $score_content, $postdata_scores_put_error_bad_value5, $consumer_key, $secret);    
-
-    echo "TEST 8.6: Try to delete a score in a course that doesn’t exists \n";
-        echo "EXPECTED RESULT: 404 \n";
-    call_service('DELETE SCORE', $url_score_test1, $http_method_delete, $score_content, $postdata_score_delete, $consumer_key, $secret);    
-
-    echo "TEST 8.7:  Try to delete a score in a lineitem that doesn’t exists \n";
-        echo "EXPECTED RESULT: 404 \n";
-    call_service('DELETE SCORE', $url_score_test2, $http_method_delete, $score_content, $postdata_score_delete, $consumer_key, $secret);
-
-    echo "TEST 8.8:  Try to delete a score in for a user that doesn’t exists or is not enrolled in the course \n";
-        echo "EXPECTED RESULT: 404 \n";
-    call_service('DELETE SCORE', $url_score_test3, $http_method_delete, $score_content, $postdata_score_delete, $consumer_key, $secret);
-
-    echo "TEST 8.9: Try to get a scores list \n";
-        echo "EXPECTED RESULT: 405 \n";
-    call_service('GET SCORE', $url_score, $http_method_get, $score_content, $postdata_false, $consumer_key, $secret);
-
-
-
-}
-
-if ($test_number==9){
-
-/* TEST 9: SCORE: SUCCESS TESTS with PUT/DELETE
-TEST #1  Try to put a score with the right parameters and fully graded
-EXPECTED: 200 return the result
-TEST #2  Try to get the result for the course/lineitem and student
-EXPECTED: 200 return the result
-TEST #3  Try to put a score with the right parameters and not fully graded
-EXPECTED: 200 return the empty result 
-TEST #4  Try to get the result for the course/lineitem and student
-EXPECTED: 200 return the empty result
-TEST #5  Try to delete a score
-EXPECTED: 204 
-*/
-
-
-    echo "TEST 9.1: Try to put a score with the right parameters and fully graded \n";
-        echo "EXPECTED RESULT: 200 return the result\n";
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 13.1: Try to get the result for the course/lineitem and student \n";
-        echo "EXPECTED RESULT: 200 return the result \n";
-    call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
-
-
-    echo "TEST 9.3: Try to put a score with the right parameters and not fully graded \n";
-        echo "EXPECTED RESULT: 200 return the result\n";
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put_non_fully_graded, $consumer_key, $secret);    
-
-    echo "TEST 9.4: Try to get the result for the course/lineitem and student \n";
-        echo "EXPECTED RESULT: 200 return the result \n";
-    call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
-
-    echo "TEST 9.5: Try to delete a score \n";
-        echo "EXPECTED RESULT: 204 in DELETE and empty score in the GET\n";
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-    call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
-    call_service('DELETE SCORE', $url_score, $http_method_delete, $score_content, $postdata_false, $consumer_key, $secret);    
-    call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
-
-    
-
-
-}
-
 if ($test_number==10){
 
 /* TEST 10: RESULTS: ERROR TESTS with GET
@@ -1066,45 +919,6 @@ $lineitemnogbsnoproxytype0_id = $_GET['lineitemnogbsnoproxytype0'];
 }
 
 
-if ($test_number==18){
-
-/*TEST 18: score PUT NO GBS TESTS
-TEST #1  Try to put a score in a non-gbs lineitem related with our tool proxy
-EXPECTED: 200 updated score
-TEST #2  Try to put a score in a  a non-gbs lineitem non related with our tool proxy
-EXPECTED: 403 
-TEST #3  Try to put a score in a  a non-gbs lineitem related with our tool proxy but with type = 0
-EXPECTED: 200 updated score
-TEST #4  Try to put a score in a  a non-gbs lineitem non related with our tool proxy with type = 0
-EXPECTED: 403
-*/
-$lineitemnogbs_id = $_GET['lineitemnogbs'];
-$lineitemnogbsnoproxy_id = $_GET['lineitemnogbsnoproxy'];
-$lineitemnogbstype0_id = $_GET['lineitemnogbstype0'];
-$lineitemnogbsnoproxytype0_id = $_GET['lineitemnogbsnoproxytype0'];
-
-
-    echo "TEST 18.1: Try to put a score in a non-gbs lineitem related with our tool proxy \n";
-    echo "EXPECTED RESULT: 200 updated score \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbs_id . '/scores/'. $result_id .'/score';
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 18.2: Try to put a score in a  a non-gbs lineitem non related with our tool proxy \n";
-    echo "EXPECTED RESULT: 403 \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxy_id . '/scores/'. $result_id .'/score';
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 18.3: Try to put a score in a  a non-gbs lineitem related with our tool proxy but with type = 0 \n";
-    echo "EXPECTED RESULT: 200 updated score \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbstype0_id . '/scores/'. $result_id .'/score';
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-    echo "TEST 18.4: Try to put a score in a  a non-gbs lineitem non related with our tool proxy with type = 0 \n";
-    echo "EXPECTED RESULT: 403 \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxytype0_id . '/scores/'. $result_id .'/score';
-    call_service('PUT SCORE', $url_score, $http_method_put, $score_content, $postdata_score_put, $consumer_key, $secret);    
-
-}
 
 
 if ($test_number==19){
@@ -1186,45 +1000,6 @@ $lineitemnogbsnoproxytype0_id = $_GET['lineitemnogbsnoproxytype0'];
 }
 
 
-if ($test_number==21){
-
-/*TEST 21: score DELETE NO GBS TESTS
-TEST #1  Try to delete a score from a non-gbs lineitem related with our tool proxy
-EXPECTED: 204 deleted score
-TEST #2  Try to delete a score from a  non-gbs lineitem non related with our tool proxy
-EXPECTED: 403 
-TEST #3  Try to delete a score from a  non-gbs lineitem related with our tool proxy but with type = 0
-EXPECTED: 204 deleted score
-TEST #4  Try to delete a score from a non-gbs lineitem non related with our tool proxy with type = 0
-EXPECTED: 403
-*/
-
-$lineitemnogbs_id = $_GET['lineitemnogbs'];
-$lineitemnogbsnoproxy_id = $_GET['lineitemnogbsnoproxy'];
-$lineitemnogbstype0_id = $_GET['lineitemnogbstype0'];
-$lineitemnogbsnoproxytype0_id = $_GET['lineitemnogbsnoproxytype0'];
-
-    echo "TEST 21.1: Try to delete a score from a non-gbs lineitem related with our tool proxy \n";
-    echo "EXPECTED RESULT:  204 deleted score \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbs_id . '/scores/'. $result_id .'/score';
-    call_service('DELETE SCORE', $url_score, $http_method_delete, $score_content, $postdata_false, $consumer_key, $secret);    
-
-    echo "TEST 21.2: Try to delete a score from a  non-gbs lineitem non related with our tool proxy \n";
-    echo "EXPECTED RESULT:  403 \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxy_id . '/scores/'. $result_id .'/score';
-    call_service('DELETE SCORE', $url_score, $http_method_delete, $score_content, $postdata_false, $consumer_key, $secret);    
-
-    echo "TEST 21.3: Try to delete a score from a  non-gbs lineitem related with our tool proxy but with type = 0 \n";
-    echo "EXPECTED RESULT:  204 deleted score \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbstype0_id . '/scores/'. $result_id .'/score';
-    call_service('DELETE SCORE', $url_score, $http_method_delete, $score_content, $postdata_false, $consumer_key, $secret);    
-
-    echo "TEST 21.4: Try to delete a score from a non-gbs lineitem non related with our tool proxy with type = 0\n";
-    echo "EXPECTED RESULT: 403 \n";
-    $url_score = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxytype0_id . '/scores/'. $result_id .'/score';
-    call_service('DELETE SCORE', $url_score, $http_method_delete, $score_content, $postdata_false, $consumer_key, $secret);    
-
-}
 
 
 if ($test_number==22){
