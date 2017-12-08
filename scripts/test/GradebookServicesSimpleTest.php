@@ -35,9 +35,6 @@ $query_lineitem_put = false;
 $query_lineitem_delete = false;
 //SCORES
 $query_scores_post = false;
-//SCORE
-$query_score_put = false;
-$query_score_delete = false;
 //RESULT
 $query_result_get = false;
 //RESULTS
@@ -45,7 +42,6 @@ $query_results_get = true;
 
 //These 2 will return always 405
 $query_scores_get = false;
-$query_score_get = false;
 
 //////////////////
 //1.2 PARAMETERS
@@ -60,8 +56,6 @@ $lti_link_id_post=1;
 $use_lti_link_id_put=false; //To decide if we will create a decoupled or coupled lineitem
 $lti_link_id_put=1;
 $score_score_of_post = "5";
-$score_score_of_put = "5";
-$score_score_of_delete = "5";
 $score_id='2';
 $result_id = '2';
 
@@ -69,7 +63,6 @@ $result_id = '2';
 $item_label_post='New Line';
 $item_label_put='New Line Item updated PUT';
 $line_item_score_maximum_post='10.0';
-$line_item_score_maximum_put='45.0';
 $resource_id_post='0000000000001';
 $resource_id_put='0000000000002';
 
@@ -83,16 +76,11 @@ $resource_id_put='0000000000002';
 //SCORES
 $score_result_user_id='4';
 $score_score_given_post = '5';
-$score_score_given_put = '15';
 $score_score_maximum_post = '10';
-$score_score_maximum_put = '55';
 $score_comment_post = "Bad job";
-$score_comment_put = "Good job";
 //Initialized, Started, InProgress, Submitted, Completed
 $score_activity_progress_post = "Completed";
-$score_activity_progress_put = "Completed";
 $score_timestamp_post=date('c',time());
-$score_timestamp_put=date('c',time());
 // Include leading ? if provided. Can comment out to omit.
 // ?limit=5
 // ?limit=5&from=2      (from record offset, if provided, limit must be specified)
@@ -103,7 +91,6 @@ $score_timestamp_put=date('c',time());
 //These are the possible values
 //FullyGraded, Pending, PendingManual, Failed, NotReady
 $score_progress_post = "FullyGraded";
-$score_progress_put = "FullyGraded";
 
 // RESULTS
 // Include leading ? if provided. Can comment out to omit.
@@ -138,11 +125,6 @@ $postdata_lineitems_delete = null;
 $postdata_scores_post = '{"scoreGiven":'.$score_score_given_post.',"scoreMaximum":'.
 $score_score_maximum_post.',"comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"'.$score_timestamp_post.'","userId":"'.$score_result_user_id.'"}';
 
-$postdata_score_put = '{"scoreGiven":'.$score_score_given_put.',"scoreMaximum":'.
-$score_score_maximum_put.',"comment":"'.$score_comment_put.'","activityProgress":"'.$score_activity_progress_put.'","gradingProgress":"'.$score_progress_put.'","timestamp":"'.$score_timestamp_put.'","userId":"'.$score_result_user_id.'"}';
-
-$postdata_score_delete = null;
-
 //Result and results are just a get
 
 
@@ -162,7 +144,6 @@ $url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores';
 if (!empty($scores_query_string)) {
   $url_scores = $url_scores . $scores_query_string;
 }
-$url_score = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores/'. $result_id .'/score';
 $url_result = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/'. $result_id .'/result';
 $url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results';
 if (!empty($results_query_string)) {
@@ -177,7 +158,6 @@ if (!empty($results_query_string)) {
 //These doesn't need to change.
 $lineitem_content = 'application/vnd.ims.lis.v2.lineitem+json';
 $lineitemcontainer_content = 'application/vnd.ims.lis.v2.lineitemcontainer+json';
-$score_content = 'application/vnd.ims.lis.v1.score+json';
 $scorecontainer_content = 'application/vnd.ims.lis.v1.scorecontainer+json';
 $result_content = 'application/vnd.ims.lis.v2.result+json';
 $resultcontainer_content = 'application/vnd.ims.lis.v1.resultcontainer+json';
@@ -295,45 +275,6 @@ echo $postdata_scores_post;
 echo "\n";
 echo "\n";
 call_service($url_scores,$http_method_post,$score_content,$postdata_scores_post, $consumer_key, $secret);
-echo "\n";
-echo "--------------------------------------------------------------------------------\n";
-echo "\n";
-}
-
-//GET score
-if($query_score_get){
-echo "--------------------------------GET SCORE---------------------------------------\n";
-echo "URL: {$url_score}";
-echo "\n";
-echo "\n";
-call_service($url_score, $http_method_get, $score_content, $postdata_false, $consumer_key, $secret);
-echo "\n";
-echo "--------------------------------------------------------------------------------\n";
-echo "\n";
-}
-//PUT score
-if($query_score_put){
-//echo $postdata_score_put;
-echo "--------------------------------PUT SCORE---------------------------------------\n";
-echo "URL: {$url_score}";
-echo "\n";
-echo "\n";
-echo $postdata_score_put;
-echo "\n";
-echo "\n";
-call_service($url_score,$http_method_put,$score_content,$postdata_score_put, $consumer_key, $secret);
-echo "\n";
-echo "--------------------------------------------------------------------------------\n";
-echo "\n";
-}
-//DELETE score
-if($query_score_delete){
-echo $postdata_score_delete;
-echo "--------------------------------DELETE SCORE------------------------------------\n";
-echo "URL: {$url_score}";
-echo "\n";
-echo "\n";
-call_service($url_score,$http_method_delete,$score_content,$postdata_score_delete, $consumer_key, $secret);
 echo "\n";
 echo "--------------------------------------------------------------------------------\n";
 echo "\n";

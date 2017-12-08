@@ -93,7 +93,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
-                    $ltilinkid= optional_param('lti_link_id', null, PARAM_TEXT);
+                    $ltilinkid = optional_param('lti_link_id', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -206,8 +206,8 @@ EOD;
         }
         require_once($CFG->libdir.'/gradelib.php');
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
-        $ltilinkid= (isset($json->ltiLinkId)) ? $json->ltiLinkId: null;
-        if ($ltilinkid!= null) {
+        $ltilinkid = (isset($json->ltiLinkId)) ? $json->ltiLinkId : null;
+        if ($ltilinkid != null) {
             if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
                 throw new \Exception(null, 403);
             }
