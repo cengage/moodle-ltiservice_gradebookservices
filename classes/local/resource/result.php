@@ -74,10 +74,21 @@ class result extends \mod_lti\local\ltiservice\resource_base {
         } else {
             throw new \Exception(null, 405);
         }
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['typeid'])) {
+            $typeid = $_GET['typeid'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                if (!$this->check_type($typeid, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
             }
             if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
@@ -91,9 +102,16 @@ class result extends \mod_lti\local\ltiservice\resource_base {
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
                 throw new \Exception(null, 403);
             }
-            if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
-                    $this->get_service()->get_tool_proxy()->id))) {
-                        throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
+                        $this->get_service()->get_tool_proxy()->id))) {
+                            throw new \Exception(null, 403);
+                        }
+            } else {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_1X_id($item->iteminstance, $item->courseid,
+                        $typeid))) {
+                            throw new \Exception(null, 403);
+                        }
             }
             require_once($CFG->libdir.'/gradelib.php');
 
@@ -105,18 +123,23 @@ class result extends \mod_lti\local\ltiservice\resource_base {
                 if (gradebookservices::is_user_gradable_in_course($contextid, $resultid)) {
                     $lineitems = new lineitems($this->get_service());
                     $endpoint = $lineitems->get_endpoint();
-                    $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
                     $result = new \stdClass();
+                    if (is_null($typeid)) {
+                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
+                        $result->scoreOf = $endpoint;
+                    } else {
+                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result?typeid={$typeid}";
+                        $result->scoreOf = "{$endpoint}?typeid={$typeid}";
+                    }
                     $result->id = $id;
                     $result->userId = $resultid;
-                    $result->scoreOf = $endpoint;
                     $json = json_encode($result, JSON_UNESCAPED_SLASHES);
                     $response->set_body($json);
                 } else {
                     throw new \Exception(null, 404);
                 }
             } else {
-                $json = $this->get_request_json($grade, $resultid);
+                $json = $this->get_request_json($grade, $resultid, $typeid);
                 $response->set_body($json);
             }
 
@@ -134,17 +157,17 @@ class result extends \mod_lti\local\ltiservice\resource_base {
      *
      * return string
      */
-    private function get_request_json($grade, $resultid) {
+    private function get_request_json($grade, $resultid, $typeid) {
 
         $lineitem = new lineitem($this->get_service());
         if (empty($grade->finalgrade)) {
             $grade->userid = $resultid;
-            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint());
+            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint(), $typeid);
         } else {
             if (empty($grade->timemodified)) {
                 throw new \Exception(null, 400);
             }
-            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint());
+            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint(), $typeid);
         }
         return $json;
 

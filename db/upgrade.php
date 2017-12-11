@@ -55,6 +55,27 @@
  * @return boolean
  */
 function xmldb_ltiservice_gradebookservices_upgrade($oldversion) {
+    
+    global $CFG, $DB;
+    
+    $dbman = $DB->get_manager();
+    
+    if ($oldversion < 2017060100) {
+        
+        // Define field description to be added to lti_types.
+        $table = new xmldb_table('ltiservice_gradebookservices');
+        $field = new xmldb_field('typeid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'toolproxyid');
+        $field = new xmldb_field('baseurl', XMLDB_TYPE_TEXT, null, null, null, null, null, 'typeid');
+        
+        // Conditionally launch add field description.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        
+        // Lti savepoint reached.
+        upgrade_mod_savepoint(true, 2017060100, 'ltiservice_gradebookservices');
+    }
+    
 
     return true;
 

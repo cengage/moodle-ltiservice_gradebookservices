@@ -75,10 +75,21 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['typeid'])) {
+            $typeid = $_GET['typeid'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                if (!$this->check_type($typeid, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
             }
             if (empty($contextid) || !($container ^ ($response->get_request_method() === 'POST')) ||
                 (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
@@ -110,7 +121,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     $response->set_content_type($this->formats[0]);
                     break;
                 case 'POST':
-                    $json = $this->post_request_json($response->get_request_data(), $contextid);
+                    $json = $this->post_request_json($response->get_request_data(), $contextid, $typeid);
                     $response->set_code(201);
                     $response->set_content_type($this->formats[1]);
                     break;
@@ -210,7 +221,7 @@ EOD;
         $endpoint = parent::get_endpoint();
         $sep = '        ';
         foreach ($items as $item) {
-            $json .= $sep . gradebookservices::item_to_json($item, $endpoint);
+            $json .= $sep . gradebookservices::item_to_json($item, $endpoint, $typeid);
             $sep = ",\n        ";
         }
         $json .= <<< EOD
@@ -242,7 +253,7 @@ EOD;
      *
      * return string
      */
-    private function post_request_json($body, $contextid) {
+    private function post_request_json($body, $contextid, $typeid) {
         global $CFG, $DB;
 
         $json = json_decode($body);
@@ -260,16 +271,31 @@ EOD;
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
         $ltilinkid = (isset($json->ltiLinkId)) ? $json->ltiLinkId : null;
         if ($ltilinkid != null) {
-            if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
-                throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
+                    throw new \Exception(null, 403);
+                }
+            } else {
+                if (!gradebookservices::check_lti_1X_id($ltilinkid, $contextid, $typeid)) {
+                    throw new \Exception(null, 403);
+                }
             }
         }
         $tag = (isset($json->tag)) ? $json->tag : '';
+        if (is_null($typeid)) {
+            $toolproxyid = $this->get_service()->get_tool_proxy()->id;
+            $baseurl = parent::get_endpoint() . "/{$id}/lineitem";
+        } else {
+            $toolproxyid = null;
+            $baseurl = parent::get_endpoint() . "/{$id}/lineitem?typeid=" . $typeid;       
+        }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
-                'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                'ltilinkid' => $ltilinkid,
-                'tag' => $tag
+                    'toolproxyid' => $toolproxyid,
+                    'typeid' => $typeid,
+                    'baseurl' => $baseurl,
+                    'ltilinkid' => $resourcelinkid,
+                    'tag' => $tag
             ));
         } catch (\Exception $e) {
             throw new \Exception(null, 500);
@@ -290,9 +316,15 @@ EOD;
             $item->iteminstance = $json->ltiLinkId;
         }
         $id = $item->insert('mod/ltiservice_gradebookservices');
-        $json->id = parent::get_endpoint() . "/{$id}/lineitem";
-        $json->results = parent::get_endpoint() . "/{$id}/results";
-        $json->scores = parent::get_endpoint() . "/{$id}/scores";
+        if (is_null($typeid)) {
+            $json->id = parent::get_endpoint() . "/{$id}/lineitem";
+            $json->results = parent::get_endpoint() . "/{$id}/results";
+            $json->scores = parent::get_endpoint() . "/{$id}/scores";
+        } else {
+            $json->id = parent::get_endpoint() . "/{$id}/lineitem?typeid={$typeid}";
+            $json->results = parent::get_endpoint() . "/{$id}/results?typeid={$typeid}";
+            $json->scores = parent::get_endpoint() . "/{$id}/scores?typeid={$typeid}";
+        }
 
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 

@@ -74,10 +74,21 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $isdelete = $response->get_request_method() === 'DELETE';
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['typeid'])) {
+            $typeid = $_GET['typeid'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                if (!$this->check_type($typeid, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
             }
             if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
@@ -94,10 +105,10 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    $this->get_request($response, $contextid, $item);
+                    $this->get_request($response, $contextid, $item, $typeid);
                     break;
                 case 'PUT':
-                    $json = $this->put_request($response->get_request_data(), $item);
+                    $json = $this->put_request($response->get_request_data(), $item, $typeid);
                     $response->set_body($json);
                     $response->set_code(200);
                     break;
@@ -122,11 +133,11 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      * @param boolean $results   True if results are to be included in the response.
      * @param string  $item       Grade item instance.
      */
-    private function get_request($response, $contextid, $item) {
+    private function get_request($response, $contextid, $item, $typeid) {
 
         $response->set_content_type($this->formats[0]);
         $json = gradebookservices::item_to_json($item, substr(parent::get_endpoint(),
-                0, strrpos(parent::get_endpoint(), "/", -10)));
+                0, strrpos(parent::get_endpoint(), "/", -10)), $typeid);
         $response->set_body($json);
 
     }
@@ -137,7 +148,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      * @param string $body       PUT body
      * @param string $olditem    Grade item instance
      */
-    private function put_request($body, $olditem) {
+    private function put_request($body, $olditem, $typeid) {
         global $DB;
         $json = json_decode($body);
         if (empty($json) ||
@@ -196,33 +207,61 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             }
         }
         if ($item->iteminstance != null) {
-            if (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
-                    $this->get_service()->get_tool_proxy()->id)) {
-                throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
+                        $this->get_service()->get_tool_proxy()->id)) {
+                            throw new \Exception(null, 403);
+                }
+            } else {
+                if (!gradebookservices::check_lti_1X_id($item->iteminstance, $item->courseid,
+                        $typeid)) {
+                            throw new \Exception(null, 403);
+                }
             }
+            
         }
         if ($updategradeitem) {
             if (!$item->update('mod/ltiservice_gradebookservices')) {
                 throw new \Exception(null, 500);
             }
         }
+        
+        $lineitem = new lineitem($this->get_service());
+        $endpoint = $lineitem->get_endpoint();
+        
         if ($upgradegradebookservices) {
             try {
-                $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array('id' => $gbs->id,
-                     'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                     'ltilinkid' => $item->iteminstance,
-                     'tag' => $gbs->tag
+                if (is_null($typeid)) {
+                    $toolproxyid = $this->get_service()->get_tool_proxy()->id;
+                    $baseurl = "{$endpoint}/{$item->id}/lineitem";
+                } else {
+                    $toolproxyid = null;
+                    $baseurl = "{$endpoint}/{$item->id}/lineitem?typeid=" . $typeid;
+                }
+                $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array(
+                        'id' => $gbs->id,
+                        'toolproxyid' => $toolproxyid,
+                        'typeid' => $typeid,
+                        'baseurl' => $baseurl,
+                        'ltilinkid' => $item->iteminstance,
+                        'tag' => $gbs->tag
                 ));
             } catch (\Exception $e) {
                 throw new \Exception(null, 500);
             }
         }
-        $lineitem = new lineitem($this->get_service());
-        $endpoint = $lineitem->get_endpoint();
-        $id = "{$endpoint}/{$item->id}/lineitem";
-        $json->id = $id;
-        $json->results = "{$endpoint}/{$item->id}/results";
-        $json->scores = "{$endpoint}/{$item->id}/scores";
+        
+        if (is_null($typeid)) {
+            $id = "{$endpoint}/{$item->id}/lineitem";
+            $json->id = $id;
+            $json->results = "{$endpoint}/{$item->id}/results";
+            $json->scores = "{$endpoint}/{$item->id}/scores";
+        } else {
+            $id = "{$endpoint}/{$item->id}/lineitem?typeid={$typeid}";
+            $json->id = $id;
+            $json->results = "{$endpoint}/{$item->id}/results?typeid={$typeid}";
+            $json->scores = "{$endpoint}/{$item->id}/scores?typeid={$typeid}";
+        }
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
     }

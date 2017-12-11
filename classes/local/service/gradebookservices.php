@@ -85,14 +85,11 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return array
      */
-    public function get_lineitems($courseid, $resourceid, $ltilinkid, $limitfrom, $limitnum) {
+    public function get_lineitems($courseid, $resourceid, $ltilinkid, $limitfrom, $limitnum, $typeid) {
         global $DB;
 
         // Select all lti potential linetiems in site.
-        $params = array('courseid' => $courseid, 'itemtype' => 'mod', 'itemmodule' => 'lti',
-            'tpid' => $this->get_tool_proxy()->id,
-            'tpid2' => $this->get_tool_proxy()->id
-        );
+        $params = array('courseid' => $courseid, 'itemtype' => 'mod', 'itemmodule' => 'lti');
 
         $optionalfilters = "";
         if (isset($resourceid)) {
@@ -125,9 +122,16 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             foreach ($lineitems as $lineitem) {
                 $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($lineitem->id);
                 if ($gbs) {
-                    if ($this->get_tool_proxy()->id == $gbs->toolproxyid) {
-                        $lineitem->tag = $gbs->tag;
-                        array_push($lineitemstoreturn, $lineitem);
+                    if (is_null($typeid)) {
+                        if ($this->get_tool_proxy()->id == $gbs->toolproxyid) {
+                            $lineitem->tag = $gbs->tag;
+                            array_push($lineitemstoreturn, $lineitem);
+                        }
+                    } else {
+                        if ($typeid == $gbs->typeid) {
+                            $lineitem->tag = $gbs->tag;
+                            array_push($lineitemstoreturn, $lineitem);
+                        }
                     }
                 } else {
                     // We will need to check if the activity related belongs to our tool proxy.
@@ -141,9 +145,20 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                                 $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $courseid);
                             }
                         }
-                        if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
-                            $lineitem->tag = null;
-                            array_push($lineitemstoreturn, $lineitem);
+                        if (is_null($typeid)) {
+                            if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
+                                $lineitem->tag = null;
+                                array_push($lineitemstoreturn, $lineitem);
+                            } else {
+                                return false;
+                            }
+                        } else {
+                            if (($tool) && ($tool->id == $typeid)) {
+                                $lineitem->tag = null;
+                                array_push($lineitemstoreturn, $lineitem);
+                            } else {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -169,7 +184,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return object
      */
-    public function get_lineitem($courseid, $itemid) {
+    public function get_lineitem($courseid, $itemid, $typeid) {
         global $DB;
 
         $gbs = $this->find_ltiservice_gradebookservice_for_lineitem($itemid);
@@ -186,23 +201,42 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                         $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $courseid);
                     }
                 }
-                if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
-                    $lineitem->tag = null;
+                if (is_null($typeid)) {
+                    if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
+                        $lineitem->tag = null;
+                    } else {
+                         return false;
+                    }
                 } else {
-                     return false;
+                    if (($tool) && ($tool->id == $typeid)) {
+                        $lineitem->tag = null;
+                    } else {
+                        return false;
+                    }
                 }
             } else {
                 return false;
             }
         } else {
-            $sql = "SELECT i.*,s.tag
-                    FROM {grade_items} i,{ltiservice_gradebookservices} s
-                    WHERE (i.courseid = :courseid)
-                            AND (i.id = :itemid)
-                            AND (s.id = :gbsid)
-                            AND (s.toolproxyid = :tpid)";
-            $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
-                    'gbsid' => $gbs->id);
+            if (is_null($typeid)) {
+                $sql = "SELECT i.*,s.tag
+                        FROM {grade_items} i,{ltiservice_gradebookservices} s
+                        WHERE (i.courseid = :courseid)
+                                AND (i.id = :itemid)
+                                AND (s.id = :gbsid)
+                                AND (s.toolproxyid = :tpid)";
+                $params = array('courseid' => $courseid, 'itemid' => $itemid, 'tpid' => $this->get_tool_proxy()->id,
+                        'gbsid' => $gbs->id);
+            } else {
+                $sql = "SELECT i.*,s.tag
+                        FROM {grade_items} i,{ltiservice_gradebookservices} s
+                        WHERE (i.courseid = :courseid)
+                                AND (i.id = :itemid)
+                                AND (s.id = :gbsid)
+                                AND (s.typeid = :typeid)";
+                $params = array('courseid' => $courseid, 'itemid' => $itemid, 'typeid' => $typeid,
+                        'gbsid' => $gbs->id);
+            }
             try {
                 $lineitem = $DB->get_records_sql($sql, $params);
                 if (count($lineitem) === 1) {
@@ -225,7 +259,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      * @param object  $result             Result object
      * @param string  $userid             User ID
      */
-    public static function set_grade_item($item, $result, $userid) {
+    public static function set_grade_item($item, $result, $userid, $typeid) {
         global $DB;
 
         if ($DB->get_record('user', array('id' => $userid)) === false) {
@@ -272,15 +306,24 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      * @param string  $endpoint           Endpoint for lineitems container request
      * @return string
      */
-    public static function item_to_json($item, $endpoint) {
+    public static function item_to_json($item, $endpoint, $typeid) {
 
         $lineitem = new \stdClass();
-        $lineitem->id = "{$endpoint}/{$item->id}/lineitem";
+        if (is_null($typeid)) {
+            $lineitem->id = "{$endpoint}/{$item->id}/lineitem";
+        } else {
+            $lineitem->id = "{$endpoint}/{$item->id}/lineitem?typeid={$typeid}";
+        }
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
         $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
-        $lineitem->results = "{$endpoint}/{$item->id}/results";
-        $lineitem->scores = "{$endpoint}/{$item->id}/scores";
+        if (is_null($typeid)) {
+            $lineitem->results = "{$endpoint}/{$item->id}/results";
+            $lineitem->scores = "{$endpoint}/{$item->id}/scores";
+        } else {
+            $lineitem->results = "{$endpoint}/{$item->id}/results?typeid={$typeid}";
+            $lineitem->scores = "{$endpoint}/{$item->id}/scores?typeid={$typeid}";
+        }
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
             $lineitem->ltiLinkId = strval($item->iteminstance);
@@ -299,10 +342,14 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return string
      */
-    public static function result_to_json($grade, $endpoint) {
+    public static function result_to_json($grade, $endpoint, $typeid) {
 
         $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
-        $id = "{$endpoint}/results/{$grade->userid}/result";
+        if (is_null($typeid)) {
+            $id = "{$endpoint}/results/{$grade->userid}/result";
+        } else {
+            $id = "{$endpoint}/results/{$grade->userid}/result?typeid={$typeid}";
+        }
         $result = new \stdClass();
         $result->id = $id;
         $result->userId = $grade->userid;
@@ -325,7 +372,8 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      * Check if an LTI id is valid.
      *
      * @param string $linkid             The lti id
-     * @param string  $course             The course
+     * @param string  $course            The course
+     * @param string  $toolproxy         The tool proxy id
      *
      * @return boolean
      */
@@ -349,6 +397,39 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             $sqlparams2['toolproxy'] = $toolproxy;
             $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
             lti.id=? and lti.course=?  and typ.toolproxyid=?';
+            return $DB->record_exists_sql($sql, $sqlparams2);
+        }
+    }
+    
+    /**
+     * Check if an LTI id is valid when we are in a LTI 1.x case
+     *
+     * @param string $linkid             The lti id
+     * @param string  $course            The course
+     * @param string  $typeid            The lti type id
+     *
+     * @return boolean
+     */
+    public static function check_lti_1X_id($linkid, $course, $typeid) {
+        global $DB;
+        // Check if lti type is zero or not (comes from a backup)
+        $sqlparams1 = array();
+        $sqlparams1['linkid'] = $linkid;
+        $sqlparams1['course'] = $course;
+        $ltiactivity = $DB->get_record('lti', array('id' => $linkid, 'course' => $course));
+        if ($ltiactivity->typeid == 0) {
+            $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
+            if (!$tool) {
+                $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $course);
+            }
+            return (($tool) && ($typeid == $tool->id));
+        } else {
+            $sqlparams2 = array();
+            $sqlparams2['linkid'] = $linkid;
+            $sqlparams2['course'] = $course;
+            $sqlparams2['typeid'] = $typeid;
+            $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
+            lti.id=? and lti.course=?  and typ.id=?';
             return $DB->record_exists_sql($sql, $sqlparams2);
         }
     }

@@ -79,10 +79,21 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['typeid'])) {
+            $typeid = $_GET['typeid'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                if (!$this->check_type($typeid, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
             }
             if (empty($contextid) || !($container ^ ($response->get_request_method() === 'POST')) ||
                 (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
@@ -97,9 +108,16 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
             if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
                 throw new \Exception(null, 403);
             }
-            if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
-                    $this->get_service()->get_tool_proxy()->id))) {
-                        throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
+                        $this->get_service()->get_tool_proxy()->id))) {
+                            throw new \Exception(null, 403);
+                }
+            } else {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_1X_id($item->iteminstance, $item->courseid,
+                        $typeid))) {
+                            throw new \Exception(null, 403);
+                        }
             }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
@@ -107,7 +125,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                     $response->set_code(405);
                     break;
                 case 'POST':
-                    $json = $this->post_request_json($response, $response->get_request_data(), $item, $contextid);
+                    $json = $this->post_request_json($response, $response->get_request_data(), $item, $contextid, $typeid);
                     $response->set_content_type($this->formats[1]);
                     break;
                 default:  // Should not be possible.
@@ -130,7 +148,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
      *
      * return string
      */
-    private function post_request_json($response, $body, $item, $contextid) {
+    private function post_request_json($response, $body, $item, $contextid, $typeid) {
         $result = json_decode($body);
         if (empty($result) ||
                 !isset($result->userId) ||
