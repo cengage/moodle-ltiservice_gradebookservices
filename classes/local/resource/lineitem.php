@@ -86,8 +86,21 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                     throw new \Exception(null, 401);
                 }
             } else {
-                if (!$this->check_type($typeid, $response->get_request_data())) {
-                    throw new \Exception(null, 401);
+                switch ($response->get_request_method()) {
+                    case 'GET':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.item:get', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                    case 'PUT':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.item:put', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                    case 'DELETE':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.item:delete', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                    default:  // Should not be possible.
+                        throw new \Exception(null, 405);
                 }
             }
             if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
@@ -213,22 +226,21 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                             throw new \Exception(null, 403);
                 }
             } else {
-                if (!gradebookservices::check_lti_1X_id($item->iteminstance, $item->courseid,
+                if (!gradebookservices::check_lti_1x_id($item->iteminstance, $item->courseid,
                         $typeid)) {
                             throw new \Exception(null, 403);
                 }
             }
-            
         }
         if ($updategradeitem) {
             if (!$item->update('mod/ltiservice_gradebookservices')) {
                 throw new \Exception(null, 500);
             }
         }
-        
+
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
-        
+
         if ($upgradegradebookservices) {
             try {
                 if (is_null($typeid)) {
@@ -250,7 +262,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                 throw new \Exception(null, 500);
             }
         }
-        
+
         if (is_null($typeid)) {
             $id = "{$endpoint}/{$item->id}/lineitem";
             $json->id = $id;
@@ -289,6 +301,20 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         }
     }
 
+    /**
+     * get permissions from the config of the tool for that resource
+     *
+     * @return Array with the permissions related to this resource by the $lti_type or null if none.
+     */
+    public function get_permissions($lti_type) {
+        $tool = lti_get_type_type_config($type_id);
+        if ($tool->gradebookcolumnsmanagement == '1') {
+            return array('LineItem.item:get','LineItem.item:put', 'LineItem.item:delete');
+        } else {
+            return array();
+        }
+    }
+    
     /**
      * Parse a value for custom parameter substitution variables.
      *

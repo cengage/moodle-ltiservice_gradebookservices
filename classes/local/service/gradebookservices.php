@@ -75,6 +75,87 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     }
 
     /**
+     * Return an array of options to add to the add/edit external tool.
+     * The array will have elements with this attributes:
+     *
+     * - type ( only 'select', 'text', 'passwordunmask' or 'checkbox' are
+     * allowed by the moment) view lib/pear/HTML/QuickForm for all types.
+     * - array of type specific parameters:
+     *  - if select it needs:
+     *      - name.
+     *      - label.
+     *      - array of options.
+     *  - if text it needs:
+     *      - name.
+     *      - label.
+     *      - parameters (example: array('size' => '64')).
+     *  - if checkbox it needs:
+     *      - name.
+     *      - main label (left side of the form).
+     *      - after checkbox lable.
+     * - setType value or null, ('int', 'text'...) If null, no default value.
+     * - setDefault or null ('2', ...) If null, no default value.
+     * - HelpButton $identifier usually the same than the name and it will be
+     *  in the texts file with _help at the end, If null, no help button.
+     * - HelpButton $component component to find the languages files. If null, no help button.
+     *
+     * @return an array of options to add to the add/edit external tool or null if no options to add.
+     *
+     */
+
+    public function get_configuration_options() {
+
+        $configurationoptions = array();
+
+        $optionsgcm = array();
+        $optionsgcm[0] = get_string('never', 'lti');
+        $optionsgcm[1] = get_string('always', 'lti');
+
+        $gradebookcolumnsmanagement = array();
+        $gradebookcolumnsmanagement[0] = 'select';
+        $parametersgcm = array();
+        $parametersgcm[0] = 'ltiservice_gradebookcolumnsmanagement';
+        $parametersgcm[1] = get_string('gradebook_columns_management', 'ltiservice_gradebookservices');
+        $parametersgcm[2] = $optionsgcm;
+        $gradebookcolumnsmanagement[1] = $parametersgcm;
+        $gradebookcolumnsmanagement[2] = 'int';
+        $gradebookcolumnsmanagement[3] = '0';
+        $gradebookcolumnsmanagement[4] = 'gradebook_columns_management';
+        $gradebookcolumnsmanagement[5] = 'ltiservice_gradebookservices';
+
+        $optionsgs = array();
+        $optionsgs[0] = get_string('never', 'lti');
+        $optionsgs[1] = get_string('always', 'lti');
+
+        $gradesynchronization = array();
+        $gradesynchronization[0] = 'select';
+        $parametersgs = array();
+        $parametersgs[0] = 'ltiservice_gradesynchronization';
+        $parametersgs[1] = get_string('grade_synchronization', 'ltiservice_gradebookservices');
+        $parametersgs[2] = $optionsgs;
+        $gradesynchronization[1] = $parametersgs;
+        $gradesynchronization[2] = 'int';
+        $gradesynchronization[3] = '0';
+        $gradesynchronization[4] = 'grade_synchronization';
+        $gradesynchronization[5] = 'ltiservice_gradebookservices';
+
+        $configurationoptions[0] = $gradebookcolumnsmanagement;
+        $configurationoptions[1] = $gradesynchronization;
+
+        return $configurationoptions;
+    }
+
+    /**
+     * Return an array with the names of the parameters that the service will be saving in the configuration
+     *
+     * @return  an array with the names of the parameters that the service will be saving in the configuration
+     *
+     */
+    public function get_configuration_parameter_names() {
+        return array('ltiservice_gradesynchronization', 'ltiservice_gradebookcolumnsmanagement');
+    }
+
+    /**
      * Fetch the lineitem instances.
      *
      * @param string $courseid       ID of course
@@ -397,7 +478,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             return $DB->record_exists_sql($sql, $sqlparams2);
         }
     }
-    
+
     /**
      * Check if an LTI id is valid when we are in a LTI 1.x case
      *
@@ -407,9 +488,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return boolean
      */
-    public static function check_lti_1X_id($linkid, $course, $typeid) {
+    public static function check_lti_1x_id($linkid, $course, $typeid) {
         global $DB;
-        // Check if lti type is zero or not (comes from a backup)
+        // Check if lti type is zero or not (comes from a backup).
         $sqlparams1 = array();
         $sqlparams1['linkid'] = $linkid;
         $sqlparams1['course'] = $course;

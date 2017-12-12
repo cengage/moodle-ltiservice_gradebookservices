@@ -88,8 +88,17 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     throw new \Exception(null, 401);
                 }
             } else {
-                if (!$this->check_type($typeid, $response->get_request_data())) {
-                    throw new \Exception(null, 401);
+                switch ($response->get_request_method()) {
+                    case 'GET':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.collection:get', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                    case 'POST':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.collection:post', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                    default:  // Should not be possible.
+                        throw new \Exception(null, 405);
                 }
             }
             if (empty($contextid) || !($container ^ ($response->get_request_method() === 'POST')) ||
@@ -224,7 +233,7 @@ EOD;
                     throw new \Exception(null, 403);
                 }
             } else {
-                if (!gradebookservices::check_lti_1X_id($ltilinkid, $contextid, $typeid)) {
+                if (!gradebookservices::check_lti_1x_id($ltilinkid, $contextid, $typeid)) {
                     throw new \Exception(null, 403);
                 }
             }
@@ -235,7 +244,7 @@ EOD;
             $baseurl = parent::get_endpoint() . "/{$id}/lineitem";
         } else {
             $toolproxyid = null;
-            $baseurl = parent::get_endpoint() . "/{$id}/lineitem?typeid=" . $typeid;       
+            $baseurl = parent::get_endpoint() . "/{$id}/lineitem?typeid=" . $typeid;
         }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
@@ -276,6 +285,20 @@ EOD;
 
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
+    }
+    
+    /**
+     * get permissions from the config of the tool for that resource
+     *
+     * @return Array with the permissions related to this resource by the $lti_type or null if none.
+     */
+    public function get_permissions($lti_type) {
+        $tool = lti_get_type_type_config($type_id);
+        if ($tool->gradebookcolumnsmanagement == '1') {
+            return array('LineItem.collection:get','LineItem.collection:post');           
+        } else {
+            return array();
+        }
     }
 
     /**
