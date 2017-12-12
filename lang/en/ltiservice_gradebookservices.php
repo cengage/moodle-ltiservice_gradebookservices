@@ -27,3 +27,7 @@ $string['modulename'] = 'LTI Grades';
 $string['pluginname'] = 'LTI Assignment and Grade Services';
 $string['servicename'] = 'LTI Assignment and Grade Services';
 $string['cleanup'] = 'LTI Assignment and Grade Services table cleanup';
+$string['gradebook_columns_management'] = 'Tool\'s Gradebook Columns management';
+$string['gradebook_columns_management_help'] = 'We need the help here';
+$string['grade_synchronization'] = 'Tool\'s Grade synchronization';
+$string['grade_synchronization_help'] = 'We need the help here';
