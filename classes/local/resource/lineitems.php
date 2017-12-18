@@ -93,10 +93,12 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                         if (!$this->check_type($typeid, $contextid, 'LineItem.collection:get', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     case 'POST':
                         if (!$this->check_type($typeid, $contextid, 'LineItem.collection:post', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     default:  // Should not be possible.
                         throw new \Exception(null, 405);
                 }
@@ -156,6 +158,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param string $ltilinkid Resource Link identifier used for filtering, may be null
      * @param int    $limitfrom      Offset of the first line item to return
      * @param int    $limitnum       Maximum number of line items to return, ignored if zero or less
+     * @param int    $typeid         To know if we are going to use LTIadvantage or not in this query.
      *
      * return string
      */
@@ -164,7 +167,11 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         if (isset($limitnum) && $limitnum > 0) {
             if (count($items) == $limitnum) {
                 $limitfrom += $limitnum;
-                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                if (is_null($typeid)) {
+                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                } else {
+                    $nextpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
+                }
                 if (isset($resourceid)) {
                     $nextpage .= "&resource_id={$resourceid}";
                 }
@@ -241,17 +248,17 @@ EOD;
         $tag = (isset($json->tag)) ? $json->tag : '';
         if (is_null($typeid)) {
             $toolproxyid = $this->get_service()->get_tool_proxy()->id;
-            $baseurl = parent::get_endpoint() . "/{$id}/lineitem";
+            $baseurl = null;
         } else {
             $toolproxyid = null;
-            $baseurl = parent::get_endpoint() . "/{$id}/lineitem?typeid=" . $typeid;
+            $baseurl = lti_get_type_type_config($typeid)->lti_toolurl;
         }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                     'toolproxyid' => $toolproxyid,
                     'typeid' => $typeid,
                     'baseurl' => $baseurl,
-                    'ltilinkid' => $resourcelinkid,
+                    'ltilinkid' => $ltilinkid,
                     'tag' => $tag
             ));
         } catch (\Exception $e) {
@@ -282,20 +289,19 @@ EOD;
             $json->results = parent::get_endpoint() . "/{$id}/results?typeid={$typeid}";
             $json->scores = parent::get_endpoint() . "/{$id}/scores?typeid={$typeid}";
         }
-
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
     }
-    
+
     /**
      * get permissions from the config of the tool for that resource
      *
      * @return Array with the permissions related to this resource by the $lti_type or null if none.
      */
-    public function get_permissions($lti_type) {
-        $tool = lti_get_type_type_config($type_id);
-        if ($tool->gradebookcolumnsmanagement == '1') {
-            return array('LineItem.collection:get','LineItem.collection:post');           
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradebookcolumnsmanagement == '1') {
+            return array('LineItem.collection:get', 'LineItem.collection:post');
         } else {
             return array();
         }

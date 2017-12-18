@@ -91,14 +91,17 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                         if (!$this->check_type($typeid, $contextid, 'LineItem.item:get', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     case 'PUT':
                         if (!$this->check_type($typeid, $contextid, 'LineItem.item:put', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     case 'DELETE':
                         if (!$this->check_type($typeid, $contextid, 'LineItem.item:delete', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     default:  // Should not be possible.
                         throw new \Exception(null, 405);
                 }
@@ -112,7 +115,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             if ($DB->get_record('grade_items', array('id' => $itemid)) === false) {
                 throw new \Exception(null, 404);
             }
-            if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
+            if (($item = $this->get_service()->get_lineitem($contextid, $itemid, $typeid)) === false) {
                 throw new \Exception(null, 403);
             }
             require_once($CFG->libdir.'/gradelib.php');
@@ -306,15 +309,15 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      *
      * @return Array with the permissions related to this resource by the $lti_type or null if none.
      */
-    public function get_permissions($lti_type) {
-        $tool = lti_get_type_type_config($type_id);
-        if ($tool->gradebookcolumnsmanagement == '1') {
-            return array('LineItem.item:get','LineItem.item:put', 'LineItem.item:delete');
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradebookcolumnsmanagement == '1') {
+            return array('LineItem.item:get', 'LineItem.item:put', 'LineItem.item:delete');
         } else {
             return array();
         }
     }
-    
+
     /**
      * Parse a value for custom parameter substitution variables.
      *
