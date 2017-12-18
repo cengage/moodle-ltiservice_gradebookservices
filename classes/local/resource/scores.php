@@ -96,10 +96,12 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                         if (!$this->check_type($typeid, $contextid, 'Score.collection:get', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     case 'POST':
                         if (!$this->check_type($typeid, $contextid, 'Score.collection:post', $response->get_request_data())) {
                             throw new \Exception(null, 401);
                         }
+                        break;
                     default:  // Should not be possible.
                         throw new \Exception(null, 405);
                 }
@@ -114,7 +116,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
             if ($DB->get_record('grade_items', array('id' => $itemid)) === false) {
                 throw new \Exception(null, 404);
             }
-            if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
+            if (($item = $this->get_service()->get_lineitem($contextid, $itemid, $typeid)) === false) {
                 throw new \Exception(null, 403);
             }
             if (is_null($typeid)) {
@@ -186,7 +188,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
         }
         if (isset($result->scoreGiven)) {
             if ($result->gradingProgress == 'FullyGraded') {
-                gradebookservices::set_grade_item($item, $result, $result->userId);
+                gradebookservices::set_grade_item($item, $result, $result->userId, $typeid);
             } else {
                 $this->reset_result($item, $result->userId);
             }
@@ -222,15 +224,15 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
      *
      * @return Array with the permissions related to this resource by the $lti_type or null if none.
      */
-    public function get_permissions($lti_type) {
-        $tool = lti_get_type_type_config($type_id);
-        if ($tool->gradesynchronization== '1') {
-            return array('Score.collection:get','Score.collection:post');
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradesynchronization == '1') {
+            return array('Score.collection:get', 'Score.collection:post');
         } else {
             return array();
         }
     }
-    
+
     /**
      * Parse a value for custom parameter substitution variables.
      *

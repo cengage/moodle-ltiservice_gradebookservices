@@ -174,22 +174,22 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                 $conditions = array('courseid' => $course, 'itemtype' => 'mod',  'itemmodule' => 'lti', 'iteminstance' => $modlti);
                 $numberoflineitems = $DB->count_records('grade_items', $conditions );
                 if ($numberoflineitems == 1) {
-                   $id = $DB-> get_field('grade_items', 'id', $conditions);
+                    $id = $DB->get_field('grade_items', 'id', $conditions);
                 } else {
                     $id = null;
                 }
             }
             if ($tool->gradebookcolumnsmanagement == '1') {
                 $launchparameters['custom_lineitems_url'] = $endpoint. "?typeid={$typeid}";
-                if (!is_null($id)){
+                if (!is_null($id)) {
                     $launchparameters['custom_lineitem_url'] = $endpoint. "/{$id}/lineitem?typeid={$typeid}";
                 }
             }
             if ($tool->gradesynchronization == '1') {
-                if (!is_null($id)){
+                if (!is_null($id)) {
                     $launchparameters['custom_results_url'] = $endpoint. "/{$id}/results?typeid={$typeid}";
                     $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
-                    if (!is_null($user)){
+                    if (!is_null($user)) {
                         $launchparameters['custom_result_url'] = $endpoint. "/{$id}/results/{$user}?typeid={$typeid}";
                         $launchparameters['custom_score_url'] = $endpoint. "/{$id}/scores/{$user}?typeid={$typeid}";
                     }
@@ -542,20 +542,24 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $sqlparams1['linkid'] = $linkid;
         $sqlparams1['course'] = $course;
         $ltiactivity = $DB->get_record('lti', array('id' => $linkid, 'course' => $course));
-        if ($ltiactivity->typeid == 0) {
-            $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
-            if (!$tool) {
-                $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $course);
-            }
-            return (($tool) && ($typeid == $tool->id));
-        } else {
-            $sqlparams2 = array();
-            $sqlparams2['linkid'] = $linkid;
-            $sqlparams2['course'] = $course;
-            $sqlparams2['typeid'] = $typeid;
-            $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
+        if ($ltiactivity) {
+            if ($ltiactivity->typeid == 0) {
+                $tool = lti_get_tool_by_url_match($ltiactivity->toolurl, $course);
+                if (!$tool) {
+                    $tool = lti_get_tool_by_url_match($ltiactivity->securetoolurl, $course);
+                }
+                return (($tool) && ($typeid == $tool->id));
+            } else {
+                $sqlparams2 = array();
+                $sqlparams2['linkid'] = $linkid;
+                $sqlparams2['course'] = $course;
+                $sqlparams2['typeid'] = $typeid;
+                $sql = 'SELECT lti.* FROM {lti} lti JOIN {lti_types} typ on lti.typeid=typ.id where
             lti.id=? and lti.course=?  and typ.id=?';
-            return $DB->record_exists_sql($sql, $sqlparams2);
+                return $DB->record_exists_sql($sql, $sqlparams2);
+            }
+        } else {
+            return false;
         }
     }
 

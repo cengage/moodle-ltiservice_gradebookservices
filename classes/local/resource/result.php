@@ -99,7 +99,7 @@ class result extends \mod_lti\local\ltiservice\resource_base {
             if ($DB->get_record('grade_items', array('id' => $itemid)) === false) {
                 throw new \Exception(null, 404);
             }
-            if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
+            if (($item = $this->get_service()->get_lineitem($contextid, $itemid, $typeid)) === false) {
                 throw new \Exception(null, 403);
             }
             if (is_null($typeid)) {
@@ -172,15 +172,15 @@ class result extends \mod_lti\local\ltiservice\resource_base {
         return $json;
 
     }
-    
+
     /**
      * get permissions from the config of the tool for that resource
      *
      * @return Array with the permissions related to this resource by the $lti_type or null if none.
      */
-    public function get_permissions($lti_type) {
-        $tool = lti_get_type_type_config($type_id);
-        if ($tool->gradesynchronization== '1') {
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradesynchronization == '1') {
             return array('Result.item:get');
         } else {
             return array();
