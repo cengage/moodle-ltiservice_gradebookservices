@@ -172,7 +172,11 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                 // an empty page collection may be returned for the final offset when the last page set contains the
                 // full limit of items, do the same here.
                 $limitfrom += $limitnum;
-                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                if (is_null($typeid)){
+                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                } else {
+                    $nextpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
+                }
             }
         }
 
