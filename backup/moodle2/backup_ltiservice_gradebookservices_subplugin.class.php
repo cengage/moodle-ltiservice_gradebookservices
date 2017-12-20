@@ -73,7 +73,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         $nonactivitylineitems = new backup_nested_element('nonactivitylineitems');
         $nonactivitylineitemslti2 = new backup_nested_element('nonactivitylineitemslti2');
         $nonactivitylineitemsltiad = new backup_nested_element('nonactivitylineitemsltiad');
-        $nonactivitylineitem = new backup_nested_element('uncoupled_grade_item_lti2', array('id'), array(
+        $nonactivitylineitemlti2= new backup_nested_element('uncoupled_grade_item_lti2', array('id'), array(
                 'categoryid', 'itemname', 'itemtype', 'itemmodule',
                 'iteminstance', 'itemnumber', 'iteminfo', 'idnumber',
                 'calculation', 'gradetype', 'grademax', 'grademin',
@@ -82,7 +82,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
                 'sortorder', 'display', 'decimals', 'hidden', 'locked', 'locktime',
                 'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'baseurl', 'tag', 'vendorcode', 'guid'));
 
-        $nonactivitylineitem = new backup_nested_element('uncoupled_grade_item_ltiad', array('id'), array(
+        $nonactivitylineitemltiad= new backup_nested_element('uncoupled_grade_item_ltiad', array('id'), array(
                 'categoryid', 'itemname', 'itemtype', 'itemmodule',
                 'iteminstance', 'itemnumber', 'iteminfo', 'idnumber',
                 'calculation', 'gradetype', 'grademax', 'grademin',
@@ -118,7 +118,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         $thisactivitylineitemsltiad->add_child($thisactivitylineitemltiad);
 
         $subpluginwrapper->add_child($nonactivitylineitems);
-        $nonactivitylineitems->add_child($nonactivitylineitemlti2);
+        $nonactivitylineitems->add_child($nonactivitylineitemslti2);
         $nonactivitylineitemslti2->add_child($nonactivitylineitemlti2);
         $nonactivitylineitemlti2->add_child($gradegradeslti2);
         $gradegradeslti2->add_child($gradegradelti2);
@@ -161,7 +161,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         $thisactivitylineitemlti2->set_source_sql($thisactivitylineitemslti2sql, $thisactivitylineitemsparams);
         $thisactivitylineitemltiad->set_source_sql($thisactivitylineitemsltiadsql, $thisactivitylineitemsparams);
 
-        $nonactivitylineitemslti2params = array('courseid' => backup::VAR_COURSEID);
+        $nonactivitylineitemsparams = array('courseid' => backup::VAR_COURSEID);
         $nonactivitylineitemlti2->set_source_sql($nonactivitylineitemslti2sql, $nonactivitylineitemsparams);
         $nonactivitylineitemltiad->set_source_sql($nonactivitylineitemsltiadsql, $nonactivitylineitemsparams);
 

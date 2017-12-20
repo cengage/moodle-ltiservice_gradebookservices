@@ -327,7 +327,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         $newtypeid = 0;
         $oldtypeid = $data->typeid;
 
-        $dbtypeidparameter = array('typeid' => $oldtypeid, 'course' => $courseid);
+        $dbtypeidparameter = array('id' => $oldtypeid, 'course' => $courseid);
         // We will check if the typeid is specific for the course.
         // And if not, we will check if is a tool for all moodle
         // If none of the previus we will return 0.
@@ -335,7 +335,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         if ($dbtype) {
             $newtypeid = $dbtype;
         } else {
-            $dbtypeidparameter = array('typeid' => $oldtypeid, 'course' => 1);
+            $dbtypeidparameter = array('id' => $oldtypeid, 'course' => 1);
             $dbtype = $DB->get_field('lti_types', 'id', $dbtypeidparameter, IGNORE_MISSING);
             if ($dbtype) {
                 $newtypeid = $dbtype;
