@@ -254,6 +254,8 @@ EOD;
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradesynchronization == '1') {
+            return array();
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
             return array('Result.collection:get');
         } else {
             return array();

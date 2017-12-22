@@ -108,8 +108,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $configurationoptions = array();
 
         $optionsgcm = array();
-        $optionsgcm[0] = get_string('never', 'lti');
-        $optionsgcm[1] = get_string('always', 'lti');
+        $optionsgcm[0] = get_string('nevergcm', 'ltiservice_gradebookservices');
+        $optionsgcm[1] = get_string('partialgcm', 'ltiservice_gradebookservices');
+        $optionsgcm[2] = get_string('alwaysgcm', 'ltiservice_gradebookservices');
 
         $gradebookcolumnsmanagement = array();
         $gradebookcolumnsmanagement[0] = 'select';
@@ -124,8 +125,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $gradebookcolumnsmanagement[5] = 'ltiservice_gradebookservices';
 
         $optionsgs = array();
-        $optionsgs[0] = get_string('never', 'lti');
-        $optionsgs[1] = get_string('always', 'lti');
+        $optionsgs[0] = get_string('nevergs', 'ltiservice_gradebookservices');
+        $optionsgs[1] = get_string('partialgs', 'ltiservice_gradebookservices');
+        $optionsgs[2] = get_string('alwaysgs', 'ltiservice_gradebookservices');
 
         $gradesynchronization = array();
         $gradesynchronization[0] = 'select';
@@ -179,19 +181,20 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                     $id = null;
                 }
             }
-            if ($tool->gradebookcolumnsmanagement == '1') {
+            if ($tool->gradebookcolumnsmanagement == '1' || $tool->gradebookcolumnsmanagement == '2') {
                 $launchparameters['custom_lineitems_url'] = $endpoint. "?typeid={$typeid}";
                 if (!is_null($id)) {
                     $launchparameters['custom_lineitem_url'] = $endpoint. "/{$id}/lineitem?typeid={$typeid}";
                 }
             }
-            if ($tool->gradesynchronization == '1') {
+            if ($tool->gradesynchronization == '1' || $tool->gradesynchronization == '2') {
                 if (!is_null($id)) {
                     $launchparameters['custom_results_url'] = $endpoint. "/{$id}/results?typeid={$typeid}";
-                    $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
+                    if ($tool->gradesynchronization == '2') {
+                        $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
+                    }
                     if (!is_null($user)) {
                         $launchparameters['custom_result_url'] = $endpoint. "/{$id}/results/{$user}?typeid={$typeid}";
-                        $launchparameters['custom_score_url'] = $endpoint. "/{$id}/scores/{$user}?typeid={$typeid}";
                     }
                 }
             }
