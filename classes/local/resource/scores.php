@@ -93,9 +93,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
             } else {
                 switch ($response->get_request_method()) {
                     case 'GET':
-                        if (!$this->check_type($typeid, $contextid, 'Score.collection:get', $response->get_request_data())) {
-                            throw new \Exception(null, 401);
-                        }
+                        $response->set_code(405);
                         break;
                     case 'POST':
                         if (!$this->check_type($typeid, $contextid, 'Score.collection:post', $response->get_request_data())) {
@@ -227,7 +225,9 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradesynchronization == '1') {
-            return array('Score.collection:get', 'Score.collection:post');
+            return array('Score.collection:post');
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
+            return array('Score.collection:post');
         } else {
             return array();
         }

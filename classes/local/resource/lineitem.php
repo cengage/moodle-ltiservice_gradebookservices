@@ -312,6 +312,8 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradebookcolumnsmanagement == '1') {
+            return array('LineItem.item:get');
+        } else if ($tool->ltiservice_gradebookcolumnsmanagement == '2') {
             return array('LineItem.item:get', 'LineItem.item:put', 'LineItem.item:delete');
         } else {
             return array();
