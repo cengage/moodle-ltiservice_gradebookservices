@@ -24,6 +24,7 @@
  */
 
 defined('MOODLE_INTERNAL') || die();
+require_once($CFG->dirroot.'/mod/lti/locallib.php');
 
 /**
  * Provides the information to backup gradebookservices lineitems
@@ -40,13 +41,12 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
      * @return backup_subplugin_element
      */
     protected function define_lti_subplugin_structure() {
+        global $DB;
 
         $userinfo = $this->get_setting_value('users');
-
         // Create XML elements.
         $subplugin = $this->get_subplugin_element();
         $subpluginwrapper = new backup_nested_element($this->get_recommended_name());
-
         // The lineitem(s) related with this element.
         $thisactivitylineitems = new backup_nested_element('thisactivitylineitems');
         $thisactivitylineitemslti2 = new backup_nested_element('thisactivitylineitemslti2');
@@ -73,7 +73,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         $nonactivitylineitems = new backup_nested_element('nonactivitylineitems');
         $nonactivitylineitemslti2 = new backup_nested_element('nonactivitylineitemslti2');
         $nonactivitylineitemsltiad = new backup_nested_element('nonactivitylineitemsltiad');
-        $nonactivitylineitemlti2= new backup_nested_element('uncoupled_grade_item_lti2', array('id'), array(
+        $nonactivitylineitemlti2 = new backup_nested_element('uncoupled_grade_item_lti2', array('id'), array(
                 'categoryid', 'itemname', 'itemtype', 'itemmodule',
                 'iteminstance', 'itemnumber', 'iteminfo', 'idnumber',
                 'calculation', 'gradetype', 'grademax', 'grademin',
@@ -82,7 +82,7 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
                 'sortorder', 'display', 'decimals', 'hidden', 'locked', 'locktime',
                 'needsupdate', 'timecreated', 'timemodified', 'toolproxyid', 'baseurl', 'tag', 'vendorcode', 'guid'));
 
-        $nonactivitylineitemltiad= new backup_nested_element('uncoupled_grade_item_ltiad', array('id'), array(
+        $nonactivitylineitemltiad = new backup_nested_element('uncoupled_grade_item_ltiad', array('id'), array(
                 'categoryid', 'itemname', 'itemtype', 'itemmodule',
                 'iteminstance', 'itemnumber', 'iteminfo', 'idnumber',
                 'calculation', 'gradetype', 'grademax', 'grademin',
@@ -142,33 +142,76 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
                            WHERE courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
                            AND g.iteminstance = ? AND g.itemnumber>10000 AND l.toolproxyid is null";
+
+        $typeid = $DB->get_field('lti', 'typeid' , ['id' => $this->task->get_activityid()]);
+
+        if ($typeid != 0) {
+            if ($DB->record_exists('lti_types', ['id' => $typeid])) {
+                $toolproxyid = $DB->get_field('lti_types', 'toolproxyid' , ['id' => $typeid]);
+                $baseurl = $DB->get_field('lti_types', 'baseurl' , ['id' => $typeid]);
+            } else {
+                // If and activity is asigned to a type that doesn't exists we don't want to backup any related lineitems.
+                // This should not happen, but we cover here this just in case.
+                $toolproxyid = '0';
+                $baseurl = 'NOVALIDTYPE';
+            }
+        } else { // This activity comes from and old backup
+            // 1. Let's check if the activity is coupled. If so, find the values in the GBS element.
+            if ($gbsrecord = $DB->get_record('ltiservice_gradebookservices', ['ltilinkid' => $this->task->get_activityid()])) {
+                $typeid = $gbsrecord->typeid;
+                $toolproxyid = $gbsrecord->toolproxyid;
+                $baseurl = $gbsrecord->baseurl;
+            } else { // 2. If it is uncoupled... we will need to guess the right activity typeid
+                // Guess the typeid for the activity.
+                $toolurl = $DB->get_field('lti', 'toolurl' , ['id' => $this->task->get_activityid()]);
+                $tool = lti_get_tool_by_url_match($toolurl, $this->task->get_courseid());
+                if (!$tool) {
+                    $securetoolurl = $DB->get_field('lti', 'securetoolurl' , ['id' => $this->task->get_activityid()]);
+                    $tool = lti_get_tool_by_url_match($securetoolurl,  $this->task->get_courseid());
+                }
+                if ($tool) {
+                    $typeid = $tool->id;
+                }
+                // If we have a valid typeid then.
+                if ($typeid != 0) {
+                    $toolproxyid = $DB->get_field('lti_types', 'toolproxyid' , ['id' => $typeid]);
+                    $baseurl = $DB->get_field('lti_types', 'baseurl' , ['id' => $typeid]);
+                } else { // If not, we won't add any grade_item here.
+                    $typeid = '0';
+                    $toolproxyid = '0';
+                    $baseurl = 'NOVALIDTYPE';
+                }
+            }
+        }
         $nonactivitylineitemslti2sql = "SELECT g.*,l.toolproxyid,l.baseurl,l.tag,t.vendorcode,t.guid
                            FROM {grade_items} g
                            JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
                            JOIN {lti_tool_proxies} t ON (t.id = l.toolproxyid)
                            WHERE courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
-                           AND g.iteminstance is null AND g.itemnumber>10000 AND l.typeid is null";
+                           AND g.iteminstance is null
+                           AND g.itemnumber>10000 AND l.typeid is null AND l.toolproxyid = ?";
         $nonactivitylineitemsltiadsql = "SELECT g.*,l.typeid,l.baseurl,l.tag
                            FROM {grade_items} g
                            JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
                            JOIN {lti_types} t ON (t.id = l.typeid)
                            WHERE courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
-                           AND g.iteminstance is null AND g.itemnumber>10000 AND l.toolproxyid is null";
+                           AND g.iteminstance is null
+                           AND g.itemnumber>10000 AND l.typeid = ? AND l.baseurl = ? AND l.toolproxyid is null";
 
-        $thisactivitylineitemsparams = array('courseid' => backup::VAR_COURSEID, 'iteminstance' => backup::VAR_ACTIVITYID);
+        $thisactivitylineitemsparams = ['courseid' => backup::VAR_COURSEID, 'iteminstance' => backup::VAR_ACTIVITYID];
         $thisactivitylineitemlti2->set_source_sql($thisactivitylineitemslti2sql, $thisactivitylineitemsparams);
         $thisactivitylineitemltiad->set_source_sql($thisactivitylineitemsltiadsql, $thisactivitylineitemsparams);
+        $nonactivitylineitemslti2params = [backup::VAR_COURSEID, backup_helper::is_sqlparam($toolproxyid)];
+        $nonactivitylineitemsltiadparams = [backup::VAR_COURSEID,
+                backup_helper::is_sqlparam($typeid), backup_helper::is_sqlparam($baseurl)];
+        $nonactivitylineitemlti2->set_source_sql($nonactivitylineitemslti2sql, $nonactivitylineitemslti2params);
+        $nonactivitylineitemltiad->set_source_sql($nonactivitylineitemsltiadsql, $nonactivitylineitemsltiadparams);
 
-        $nonactivitylineitemsparams = array('courseid' => backup::VAR_COURSEID);
-        $nonactivitylineitemlti2->set_source_sql($nonactivitylineitemslti2sql, $nonactivitylineitemsparams);
-        $nonactivitylineitemltiad->set_source_sql($nonactivitylineitemsltiadsql, $nonactivitylineitemsparams);
-
-        // TODO check if this needs to be in both (lti2/ltiad) or needs to be in only one.
         if ($userinfo) {
-            $gradegradelti2->set_source_table('grade_grades', array('itemid' => backup::VAR_PARENTID));
-            $gradegradeltiad->set_source_table('grade_grades', array('itemid' => backup::VAR_PARENTID));
+            $gradegradelti2->set_source_table('grade_grades', ['itemid' => backup::VAR_PARENTID]);
+            $gradegradeltiad->set_source_table('grade_grades', ['itemid' => backup::VAR_PARENTID]);
         }
 
         return $subplugin;
