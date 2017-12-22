@@ -82,8 +82,13 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         // we store the previousid, so we can relate this entry with the new grede item.
 
         // We will try to find a valid toolproxy in the system.
-        $newtoolproxyid = $this->find_proxy_id($data);
-
+        // If it has been found before... we use it.
+        $newtoolproxyid = 0;
+        if ($ltitoolproxy = $this->get_mappingid('ltitoolproxy', $data->toolproxyid) && $ltitoolproxy != 0) {
+            $newtoolproxyid = $ltitoolproxy;
+        } else { // If not, then we will call our own function to find it.
+            $newtoolproxyid = $this->find_proxy_id($data);
+        }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                     'toolproxyid' => $newtoolproxyid,
@@ -112,8 +117,13 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         // we store the previousid, so we can relate this entry with the new grede item.
 
         // We will try to find a valid type in the system.
-        $courseid = $this->task->get_courseid();
-        $newtypeid = $this->find_typeid($data, $courseid);
+        // If it has been done before we don't need to check it.
+        if ($ltitypeid = $this->get_mappingid('ltitype', $data->typeid)) {
+            $newtypeid = $ltitypeid;
+        } else { // If not, then we will call our own function to find it.
+            $courseid = $this->task->get_courseid();
+            $newtypeid = $this->find_typeid($data, $courseid);
+        }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                     'toolproxyid' => null,
@@ -136,8 +146,14 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
     public function process_ltiservice_gradebookservices_uncoupledgradeitemlti2($data) {
         global $DB;
         $data = (object)$data;
-        // We will try to find a valid toolproxy in the system.
-        $newtoolproxyid = $this->find_proxy_id($data);
+        // We will try to find a valid toolproxy in the system.It should have be done before
+        // so we just need to find it in the mapping.
+        $newtoolproxyid = 0;
+        if ($ltitoolproxy = $this->get_mappingid('ltitoolproxy', $data->toolproxyid) && $ltitoolproxy != 0) {
+            $newtoolproxyid = $ltitoolproxy;
+        } else {
+            $newtoolproxyid = $this->find_proxy_id($data);
+        }
         $courseid = $this->task->get_courseid();
         try {
             $sql = 'SELECT * FROM {grade_items} gi
@@ -185,9 +201,15 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
     public function process_ltiservice_gradebookservices_uncoupledgradeitemltiad($data) {
         global $DB;
         $data = (object)$data;
-        // We will try to find a valid type in the system.
+        // We will try to find a valid type in the system. It should have be done before
+        // so we just need to find it in the mapping.
         $courseid = $this->task->get_courseid();
-        $newtypeid = $this->find_typeid($data, $courseid);
+        if ($ltitypeid = $this->get_mappingid('ltitype', $data->typeid)) {
+            $newtypeid = $ltitypeid;
+        } else {
+            $courseid = $this->task->get_courseid();
+            $newtypeid = $this->find_typeid($data, $courseid);
+        }
         try {
             $sql = 'SELECT * FROM {grade_items} gi
                     INNER JOIN {ltiservice_gradebookservices} gbs ON gbs.id = gi.itemnumber
@@ -291,10 +313,9 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
     }
 
     /**
-     * Find the better toolproxy that matches with the lineitem.
-     * If none is found, then we set it to 0. Note this is
-     * interim solution until MDL-34161 - Fix restore to support course/site tools & submissions
-     * is implemented.
+     * If the toolproxy is not in the mapping (or it is 0)
+     * we try to find the toolproxyid.
+     * If none is found, then we set it to 0.
      *
      * @param mixed $data
      * @return integer $newtoolproxyid
@@ -312,14 +333,13 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         }
         return $newtoolproxyid;
     }
-
     /**
-     * Find the better typeid that matches with the lineitem.
-     * If none is found, then we set it to 0. Note this is
-     * interim solution until MDL-34161 - Fix restore to support course/site tools & submissions
-     * is implemented.
+     * If the typeid is not in the mapping or it is 0, (it should be most of the times)
+     * we will try to find the better typeid that matches with the lineitem.
+     * If none is found, then we set it to 0.
      *
      * @param mixed $data
+     * @param integer @courseid
      * @return integer $newtypeid
      */
     private function find_typeid($data, $courseid) {
@@ -327,21 +347,41 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         $newtypeid = 0;
         $oldtypeid = $data->typeid;
 
-        $dbtypeidparameter = array('id' => $oldtypeid, 'course' => $courseid);
-        // We will check if the typeid is specific for the course.
-        // And if not, we will check if is a tool for all moodle
-        // If none of the previus we will return 0.
-        $dbtype = $DB->get_field('lti_types', 'id', $dbtypeidparameter, IGNORE_MISSING);
+        // 1. Find a type with the same id in the same course.
+        $dbtypeidparameter = array('id' => $oldtypeid, 'course' => $courseid, 'baseurl' => $data->baseurl);
+        $dbtype = $DB->get_field_select('lti_types', 'id', "id=:id
+                AND course=:course AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                $dbtypeidparameter);
         if ($dbtype) {
             $newtypeid = $dbtype;
         } else {
-            $dbtypeidparameter = array('id' => $oldtypeid, 'course' => 1);
-            $dbtype = $DB->get_field('lti_types', 'id', $dbtypeidparameter, IGNORE_MISSING);
+            // 2. Find a site type for all the courses (course == 1), but with the same id.
+            $dbtypeidparameter = array('id' => $oldtypeid, 'baseurl' => $data->baseurl);
+            $dbtype = $DB->get_field_select('lti_types', 'id', "id=:id
+                    AND course=1 AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                    $dbtypeidparameter);
             if ($dbtype) {
                 $newtypeid = $dbtype;
+            } else {
+                // 3. Find a type with the same baseurl in the actual site.
+                $dbtypeidparameter = array('course' => $courseid, 'baseurl' => $data->baseurl);
+                $dbtype = $DB->get_field_select('lti_types', 'id', "course=:course
+                        AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                        $dbtypeidparameter);
+                if ($dbtype) {
+                    $newtypeid = $dbtype;
+                } else {
+                    // 4. Find a site type for all the courses (course == 1) with the same baseurl.
+                    $dbtypeidparameter = array('course' => 1, 'baseurl' => $data->baseurl);
+                    $dbtype = $DB->get_field_select('lti_types', 'id', "course=1
+                            AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                            $dbtypeidparameter);
+                    if ($dbtype) {
+                        $newtypeid = $dbtype;
+                    }
+                }
             }
         }
         return $newtypeid;
     }
-
 }
