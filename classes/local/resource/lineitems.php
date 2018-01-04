@@ -347,9 +347,9 @@ EOD;
      */
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
-        if ($tool->ltiservice_gradebookcolumnsmanagement == '1') {
+        if ($tool->ltiservice_gradesynchronization== '1') {
             return array('LineItem.collection:get');
-        } else if ($tool->ltiservice_gradebookcolumnsmanagement == '2') {
+        } else if ($tool->ltiservice_gradesynchronization== '2') {
             return array('LineItem.collection:get', 'LineItem.collection:post');
         } else {
             return array();

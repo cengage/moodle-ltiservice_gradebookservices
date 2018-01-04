@@ -181,7 +181,7 @@ class result extends \mod_lti\local\ltiservice\resource_base {
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradesynchronization == '1') {
-            return array();
+            return array('Result.item:get');
         } else if ($tool->ltiservice_gradesynchronization == '2') {
             return array('Result.item:get');
         } else {
