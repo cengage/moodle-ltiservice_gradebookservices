@@ -107,23 +107,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $configurationoptions = array();
 
-        $optionsgcm = array();
-        $optionsgcm[0] = get_string('nevergcm', 'ltiservice_gradebookservices');
-        $optionsgcm[1] = get_string('partialgcm', 'ltiservice_gradebookservices');
-        $optionsgcm[2] = get_string('alwaysgcm', 'ltiservice_gradebookservices');
-
-        $gradebookcolumnsmanagement = array();
-        $gradebookcolumnsmanagement[0] = 'select';
-        $parametersgcm = array();
-        $parametersgcm[0] = 'ltiservice_gradebookcolumnsmanagement';
-        $parametersgcm[1] = get_string('gradebook_columns_management', 'ltiservice_gradebookservices');
-        $parametersgcm[2] = $optionsgcm;
-        $gradebookcolumnsmanagement[1] = $parametersgcm;
-        $gradebookcolumnsmanagement[2] = 'int';
-        $gradebookcolumnsmanagement[3] = '0';
-        $gradebookcolumnsmanagement[4] = 'gradebook_columns_management';
-        $gradebookcolumnsmanagement[5] = 'ltiservice_gradebookservices';
-
         $optionsgs = array();
         $optionsgs[0] = get_string('nevergs', 'ltiservice_gradebookservices');
         $optionsgs[1] = get_string('partialgs', 'ltiservice_gradebookservices');
@@ -141,7 +124,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $gradesynchronization[4] = 'grade_synchronization';
         $gradesynchronization[5] = 'ltiservice_gradebookservices';
 
-        $configurationoptions[0] = $gradebookcolumnsmanagement;
         $configurationoptions[1] = $gradesynchronization;
 
         return $configurationoptions;
@@ -154,13 +136,21 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      */
     public function get_configuration_parameter_names() {
-        return array('ltiservice_gradesynchronization', 'ltiservice_gradebookcolumnsmanagement');
+        return array('ltiservice_gradesynchronization');
     }
 
     /**
      * Return an array of key/values to add to the launch parameters.
+     *
+     * @param $messagetype. 'basic-lti-launch-request' or 'ContentItemSelectionRequest'.
+     * @param $course. the course id.
+     * @param $userid. The user id.
+     * @param $typeid. The tool lti type id.
+     * @param $modlti. The id of the lti activity.
+     *
      * The type is passed to check the configuration
      * and not return parameters for services not used.
+     *
      * @return an array of key/value pairs to add as launch parameters.
      */
     public function get_launch_parameters($messagetype, $course, $user, $typeid, $modlti = null) {
@@ -181,18 +171,12 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                     $id = null;
                 }
             }
-            if ($tool->gradebookcolumnsmanagement == '1' || $tool->gradebookcolumnsmanagement == '2') {
+            if ($tool->gradesynchronization== '1' || $tool->gradesynchronization== '2') {
                 $launchparameters['custom_lineitems_url'] = $endpoint. "?typeid={$typeid}";
                 if (!is_null($id)) {
-                    $launchparameters['custom_lineitem_url'] = $endpoint. "/{$id}/lineitem?typeid={$typeid}";
-                }
-            }
-            if ($tool->gradesynchronization == '1' || $tool->gradesynchronization == '2') {
-                if (!is_null($id)) {
                     $launchparameters['custom_results_url'] = $endpoint. "/{$id}/results?typeid={$typeid}";
-                    if ($tool->gradesynchronization == '2') {
-                        $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
-                    }
+                    $launchparameters['custom_lineitem_url'] = $endpoint. "/{$id}/lineitem?typeid={$typeid}";
+                    $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
                     if (!is_null($user)) {
                         $launchparameters['custom_result_url'] = $endpoint. "/{$id}/results/{$user}?typeid={$typeid}";
                     }

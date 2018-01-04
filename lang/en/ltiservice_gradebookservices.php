@@ -27,13 +27,13 @@ $string['modulename'] = 'LTI Grades';
 $string['pluginname'] = 'LTI Gradebook Services';
 $string['servicename'] = 'LTI Gradebook Services';
 $string['cleanup'] = 'LTI Gradebook Services table cleanup';
-$string['gradebook_columns_management'] = 'Gradebook';
-$string['gradebook_columns_management_help'] = 'A tool can only query columns related to itself. Other columns will never be included in responses.';
-$string['grade_synchronization'] = 'Grade';
-$string['grade_synchronization_help'] = 'A tool can only query columns related to itself. Other columns will never be included in responses.';
-$string['nevergcm'] = 'Not Allowed';
-$string['partialgcm'] = 'Can query columns';
-$string['alwaysgcm'] = 'Can query and add columns';
-$string['nevergs'] = 'Not Allowed';
-$string['partialgs'] = 'Can post grade';
-$string['alwaysgs'] = 'Can post and retrieve grades';
+$string['grade_synchronization'] = 'IMS LTI Assignment and Grade Services: ';
+$string['grade_synchronization_help'] = 'Use the IMS LTI Assignment and Grade Service to synchronize
+ the grades instead Basic Outcomes.
+
+* **Do not use this service** -  This will use the basic outcomes features and configuration
+* **Use this service for grade sync only** - The service will populate the grades in an already existing gradebook column, but it will not be able to create new columns
+* **Use this service for grade sync and column management** -  The service will be able to create and update gradebook columns and manage the grades. ';
+$string['nevergs'] = 'Do not use this service';
+$string['partialgs'] = 'Use this service for grade sync only' ;
+$string['alwaysgs'] = 'Use this service for grade sync and column management ';
