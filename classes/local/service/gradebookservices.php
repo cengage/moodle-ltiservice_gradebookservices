@@ -143,7 +143,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      * Return an array of key/values to add to the launch parameters.
      *
      * @param $messagetype. 'basic-lti-launch-request' or 'ContentItemSelectionRequest'.
-     * @param $course. the course id.
+     * @param $courseid. the course id.
      * @param $userid. The user id.
      * @param $typeid. The tool lti type id.
      * @param $modlti. The id of the lti activity.
@@ -153,32 +153,34 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return an array of key/value pairs to add as launch parameters.
      */
-    public function get_launch_parameters($messagetype, $course, $user, $typeid, $modlti = null) {
+    public function get_launch_parameters($messagetype, $courseid, $user, $typeid, $modlti = null) {
         global $DB;
 
         $launchparameters = array();
-        if (is_used_in_context($typeid, $course)) {
-            $tool = lti_get_type_type_config($typeid);
-            $endpoint = $this->resources[0]->get_endpoint();
-            if (is_null($modlti)) {
-                $id = null;
-            } else {
-                $conditions = array('courseid' => $course, 'itemtype' => 'mod',  'itemmodule' => 'lti', 'iteminstance' => $modlti);
-                $numberoflineitems = $DB->count_records('grade_items', $conditions );
-                if ($numberoflineitems == 1) {
-                    $id = $DB->get_field('grade_items', 'id', $conditions);
-                } else {
+        $tool = lti_get_type_type_config($typeid);
+        // only inject parameters if the service is enabled for this tool
+        if ($tool->ltiservice_gradesynchronization == '1' || $tool->ltiservice_gradesynchronization == '2') {
+            // check for used in context is only needed because there is no explicit site tool - course relation
+            if ($this->is_used_in_context($typeid, $courseid)) {
+                $endpoint = $this->get_service_path() . "/{$courseid}/lineitems";
+                if (is_null($modlti)) {
                     $id = null;
+                } else {
+                    $conditions = array('courseid' => $courseid, 'itemtype' => 'mod', 'itemmodule' => 'lti', 'iteminstance' => $modlti);
+                    $numberoflineitems = $DB->count_records('grade_items', $conditions);
+                    if ($numberoflineitems == 1) {
+                        $id = $DB->get_field('grade_items', 'id', $conditions);
+                    } else {
+                        $id = null;
+                    }
                 }
-            }
-            if ($tool->gradesynchronization== '1' || $tool->gradesynchronization== '2') {
-                $launchparameters['custom_lineitems_url'] = $endpoint. "?typeid={$typeid}";
+                $launchparameters['custom_lineitems_url'] = $endpoint . "?typeid={$typeid}";
                 if (!is_null($id)) {
-                    $launchparameters['custom_results_url'] = $endpoint. "/{$id}/results?typeid={$typeid}";
-                    $launchparameters['custom_lineitem_url'] = $endpoint. "/{$id}/lineitem?typeid={$typeid}";
-                    $launchparameters['custom_scores_url'] = $endpoint. "/{$id}/scores?typeid={$typeid}";
+                    $launchparameters['custom_results_url'] = $endpoint . "/{$id}/results?typeid={$typeid}";
+                    $launchparameters['custom_lineitem_url'] = $endpoint . "/{$id}/lineitem?typeid={$typeid}";
+                    $launchparameters['custom_scores_url'] = $endpoint . "/{$id}/scores?typeid={$typeid}";
                     if (!is_null($user)) {
-                        $launchparameters['custom_result_url'] = $endpoint. "/{$id}/results/{$user}?typeid={$typeid}";
+                        $launchparameters['custom_result_url'] = $endpoint . "/{$id}/results/{$user}?typeid={$typeid}";
                     }
                 }
             }
