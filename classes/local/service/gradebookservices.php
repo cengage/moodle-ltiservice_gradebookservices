@@ -263,15 +263,11 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                             if (($tool) && ($this->get_tool_proxy()->id == $tool->toolproxyid)) {
                                 $lineitem->tag = null;
                                 array_push($lineitemstoreturn, $lineitem);
-                            } else {
-                                return false;
                             }
                         } else {
                             if (($tool) && ($tool->id == $typeid)) {
                                 $lineitem->tag = null;
                                 array_push($lineitemstoreturn, $lineitem);
-                            } else {
-                                return false;
                             }
                         }
                     }
