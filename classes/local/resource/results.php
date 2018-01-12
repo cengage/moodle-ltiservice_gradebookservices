@@ -239,8 +239,7 @@ EOD;
                 $links .= ', <' . $nextpage . '>; rel=“next”';
             }
             $links .= ', <' . $lastpage . '>; rel=“last”';
-            // Disabled until add_additional_header is included in the core code.
-            // $response->add_additional_header($links);
+            $response->add_additional_header($links);
         }
         return $json;
     }
