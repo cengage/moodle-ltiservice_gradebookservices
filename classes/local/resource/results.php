@@ -152,7 +152,6 @@ class results extends \mod_lti\local\ltiservice\resource_base {
      */
     private function get_request_json($itemid, $limitfrom, $limitnum, $typeid, $response) {
 
-
         $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
 
         if ($grades && isset($limitnum) && $limitnum > 0) {

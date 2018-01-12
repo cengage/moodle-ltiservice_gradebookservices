@@ -24,6 +24,7 @@
  */
 
 $string['modulename'] = 'LTI Grades';
+
 $string['pluginname'] = 'LTI Assignment and Grade Services';
 $string['servicename'] = 'LTI Assignment and Grade Services';
 $string['cleanup'] = 'LTI Assignment and Grade Services table cleanup';
