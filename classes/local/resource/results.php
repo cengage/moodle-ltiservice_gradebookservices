@@ -106,7 +106,7 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                         gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum);
+                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum, $typeid, $response);
                     $response->set_content_type($this->formats[0]);
                     $response->set_body($json);
                     break;
@@ -127,10 +127,13 @@ class results extends \mod_lti\local\ltiservice\resource_base {
      * @param int    $itemid     Grade item instance ID
      * @param string $limitfrom  Offset for the first result to include in this paged set
      * @param string $limitnum   Maximum number of results to include in the response, ignored if zero
+     * @param int    $typeid     Lti tool typeid (or null)
+     * @param string $response   The response element needed to add a header.
      *
      * return string
      */
-    private function get_request_json($itemid, $limitfrom, $limitnum) {
+
+    private function get_request_json($itemid, $limitfrom, $limitnum, $typeid, $response) {
 
         $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
 
@@ -140,6 +143,8 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             $resultgrades = array_filter($grades, function ($grade) {
                 return !empty($grade->timemodified);
             });
+            // We save the total count to calculate the last page.
+            $totalcount = count($resultgrades);
             // We slice to the requested item offset to insure proper item is always first, and we always return
             // first pageset of any remaining items.
             $grades = array_slice($resultgrades, $limitfrom);
@@ -148,13 +153,42 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                 $pageset = 0;
                 $grades = $pagedgrades[$pageset];
             }
-
-            if (count($grades) == $limitnum) {
-                // To be consistent with paging behavior elsewhere which uses Moodle DB limitfrom and limitnum where
-                // an empty page collection may be returned for the final offset when the last page set contains the
-                // full limit of items, do the same here.
-                $limitfrom += $limitnum;
-                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+            if ($limitfrom >= $totalcount || $limitfrom < 0) {
+                $outofrange = true;
+            } else {
+                $outofrange = false;
+            }
+            $limitprev = $limitfrom - $limitnum >=0 ? $limitfrom - $limitnum : 0;
+            $limitcurrent= $limitfrom;
+            $limitlast = $totalcount-$limitnum+1 >= 0 ? $totalcount-$limitnum+1: 0;
+            $limitfrom += $limitnum;
+            if (is_null($typeid)) {
+                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                } else {
+                    $nextpage= null;
+                }
+                $firstpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=0";
+                $canonicalpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitcurrent;
+                $lastpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitlast;
+                if (($limitcurrent > 0) && (!$outofrange)) {
+                    $prevpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitprev;
+                } else {
+                    $prevpage = null;
+                }
+            } else {
+                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                    $nextpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
+                } else {
+                    $nextpage= null;
+                }
+                $firstpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=0";
+                $canonicalpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
+                if (($limitcurrent > 0) && (!$outofrange)) {
+                    $prevpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
+                } else {
+                    $prevpage = null;
+                }
             }
         }
 
@@ -176,17 +210,21 @@ EOD;
         $json .= <<< EOD
 
   ]
-EOD;
-        if (isset($nextpage) && ($nextpage)) {
-            $json .= ",\n";
-            $json .= <<< EOD
- "nextPage" : "{$nextpage}"
-EOD;
-        }
-        $json .= <<< EOD
-
 }
 EOD;
+        if (isset($canonicalpage) && ($canonicalpage)) {
+            $links = 'links: <' . $firstpage . '>; rel=“first”';
+            if (!(is_null($prevpage))) {
+                $links .= ', <' . $prevpage . '>; rel=“prev”';
+            }
+            $links .= ', <' . $canonicalpage. '>; rel=“canonical”';
+            if (!(is_null($nextpage))) {
+                $links .= ', <' . $nextpage . '>; rel=“next”';
+            }
+            $links .= ', <' . $lastpage . '>; rel=“last”';
+            // Disabled until add_additional_header is included in the core code.
+            // $response->add_additional_header($links);
+        }
         return $json;
     }
 

@@ -148,12 +148,15 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                     }
                 }
             }
+            $lineitemsandtotalcount = array();
+            array_push($lineitemsandtotalcount, count($lineitemstoreturn));
             // Return the right array based in the paging parameters limit and from.
             if (($limitnum) && ($limitnum > 0)) {
                 $lineitemstoreturn = array_slice($lineitemstoreturn, $limitfrom, $limitnum);
             }
+            array_push($lineitemsandtotalcount, $lineitemstoreturn);
         }
-        return $lineitemstoreturn;
+        return $lineitemsandtotalcount;
     }
 
     /**
