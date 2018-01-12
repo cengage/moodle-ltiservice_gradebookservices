@@ -110,7 +110,6 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 $response->set_reason("Not Found: Course ". $contextid." doesn't exist.");
                 throw new \Exception(null, 404);
             }
-
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
@@ -308,7 +307,8 @@ EOD;
                     'ltilinkid' => $ltilinkid,
                     'tag' => $tag
             ));
-        } catch (\Exception $e) {
+        } catch (\Exception $ex) {
+            debugging('Error adding an entry in ltiservice_gradebookservices:' . $ex->getMessage());
             throw new \Exception(null, 500);
         }
 
@@ -347,9 +347,9 @@ EOD;
      */
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
-        if ($tool->ltiservice_gradesynchronization== '1') {
+        if ($tool->ltiservice_gradesynchronization == '1') {
             return array('LineItem.collection:get');
-        } else if ($tool->ltiservice_gradesynchronization== '2') {
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
             return array('LineItem.collection:get', 'LineItem.collection:post');
         } else {
             return array();

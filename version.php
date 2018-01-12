@@ -25,6 +25,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2017120700;
-$plugin->requires  = 2014111000;
+$plugin->version   = 2018011100;
+$plugin->requires  = 2018010100;
 $plugin->component = 'ltiservice_gradebookservices';
