@@ -226,7 +226,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
 
         $json = <<< EOD
 {
-  "lineItems" : [
+  [
 EOD;
         $endpoint = parent::get_endpoint();
         $sep = '        ';

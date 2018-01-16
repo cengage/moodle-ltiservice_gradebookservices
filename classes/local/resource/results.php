@@ -211,7 +211,7 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
         $json = <<< EOD
 {
-  "results" : [
+  [
 EOD;
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
