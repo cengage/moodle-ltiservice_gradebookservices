@@ -180,7 +180,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                     $launchparameters['custom_lineitem_url'] = $endpoint . "/{$id}/lineitem?typeid={$typeid}";
                     $launchparameters['custom_scores_url'] = $endpoint . "/{$id}/scores?typeid={$typeid}";
                     if (!is_null($user)) {
-                        $launchparameters['custom_result_url'] = $endpoint . "/{$id}/results/{$user}?typeid={$typeid}";
+                        $launchparameters['custom_result_url'] = $endpoint . "/{$id}/results/{$user}/result?typeid={$typeid}";
                     }
                 }
             }
