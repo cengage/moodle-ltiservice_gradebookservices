@@ -210,7 +210,6 @@ class results extends \mod_lti\local\ltiservice\resource_base {
         }
 
         $json = <<< EOD
-{
   [
 EOD;
         $lineitem = new lineitem($this->get_service());
@@ -227,7 +226,6 @@ EOD;
         $json .= <<< EOD
 
   ]
-}
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
             $links = 'links: <' . $firstpage . '>; rel=“first”';
@@ -269,7 +267,6 @@ EOD;
      */
     public function parse_value($value) {
         global $COURSE, $CFG;
-
         if (strpos($value, '$Results.url') !== false) {
             require_once($CFG->libdir . '/gradelib.php');
 
@@ -287,7 +284,6 @@ EOD;
             }
             $value = str_replace('$Results.url', $resolved, $value);
         }
-
         return $value;
     }
 }

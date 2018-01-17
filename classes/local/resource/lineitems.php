@@ -225,7 +225,6 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         }
 
         $json = <<< EOD
-{
   [
 EOD;
         $endpoint = parent::get_endpoint();
@@ -237,7 +236,6 @@ EOD;
         $json .= <<< EOD
 
   ]
-}
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
             $links = 'links: <' . $firstpage . '>; rel=“first”';
