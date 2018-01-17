@@ -238,7 +238,7 @@ EOD;
   ]
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
-            $links = 'links: <' . $firstpage . '>; rel=“first”';
+            $links = 'Link: <' . $firstpage . '>; rel=“first”';
             if (!(is_null($prevpage))) {
                 $links .= ', <' . $prevpage . '>; rel=“prev”';
             }
