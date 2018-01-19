@@ -459,7 +459,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         if (is_null($typeid)) {
             $id = "{$endpoint}/results?user_id={$grade->userid}";
         } else {
-            $id = "{$endpoint}/results?type_id={$typeis}&user_id={$grade->userid}";
+            $id = "{$endpoint}/results?type_id={$typeid}&user_id={$grade->userid}";
         }
         $result = new \stdClass();
         $result->id = $id;
