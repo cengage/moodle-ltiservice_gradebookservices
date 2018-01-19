@@ -75,10 +75,32 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                switch ($response->get_request_method()) {
+                    case 'GET':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.collection:get', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                        break;
+                    case 'POST':
+                        if (!$this->check_type($typeid, $contextid, 'LineItem.collection:post', $response->get_request_data())) {
+                            throw new \Exception(null, 401);
+                        }
+                        break;
+                    default:  // Should not be possible.
+                        throw new \Exception(null, 405);
+                }
             }
             if (empty($contextid) || !($container ^ ($response->get_request_method() === 'POST')) ||
                 (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
@@ -88,13 +110,11 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 $response->set_reason("Not Found: Course ". $contextid." doesn't exist.");
                 throw new \Exception(null, 404);
             }
-
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
                     $ltilinkid = optional_param('lti_link_id', null, PARAM_TEXT);
                     $tag = optional_param('tag', null, PARAM_TEXT);
-                    $typeid = optional_param('type_id', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -112,7 +132,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     $response->set_content_type($this->formats[0]);
                     break;
                 case 'POST':
-                    $json = $this->post_request_json($response->get_request_data(), $contextid);
+                    $json = $this->post_request_json($response->get_request_data(), $contextid, $typeid);
                     $response->set_code(201);
                     $response->set_content_type($this->formats[1]);
                     break;
@@ -218,8 +238,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         }
 
         $json = <<< EOD
-{
-  "lineItems" : [
+  [
 EOD;
         $endpoint = parent::get_endpoint();
         $sep = '        ';
@@ -230,10 +249,9 @@ EOD;
         $json .= <<< EOD
 
   ]
-}
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
-            $links = 'links: <' . $firstpage . '>; rel=“first”';
+            $links = 'Link: <' . $firstpage . '>; rel=“first”';
             if (!(is_null($prevpage))) {
                 $links .= ', <' . $prevpage . '>; rel=“prev”';
             }
@@ -242,8 +260,7 @@ EOD;
                 $links .= ', <' . $nextpage . '>; rel=“next”';
             }
             $links .= ', <' . $lastpage . '>; rel=“last”';
-            // Disabled until add_additional_header is included in the core code.
-            // $response->add_additional_header($links);
+            $response->add_additional_header($links);
         }
         return $json;
     }
@@ -256,7 +273,7 @@ EOD;
      *
      * return string
      */
-    private function post_request_json($body, $contextid) {
+    private function post_request_json($body, $contextid, $typeid) {
         global $CFG, $DB;
 
         $json = json_decode($body);
@@ -274,18 +291,34 @@ EOD;
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
         $ltilinkid = (isset($json->ltiLinkId)) ? $json->ltiLinkId : null;
         if ($ltilinkid != null) {
-            if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
-                throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
+                    throw new \Exception(null, 403);
+                }
+            } else {
+                if (!gradebookservices::check_lti_1x_id($ltilinkid, $contextid, $typeid)) {
+                    throw new \Exception(null, 403);
+                }
             }
         }
         $tag = (isset($json->tag)) ? $json->tag : '';
+        if (is_null($typeid)) {
+            $toolproxyid = $this->get_service()->get_tool_proxy()->id;
+            $baseurl = null;
+        } else {
+            $toolproxyid = null;
+            $baseurl = lti_get_type_type_config($typeid)->lti_toolurl;
+        }
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
-                'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                'ltilinkid' => $ltilinkid,
-                'tag' => $tag
+                    'toolproxyid' => $toolproxyid,
+                    'typeid' => $typeid,
+                    'baseurl' => $baseurl,
+                    'ltilinkid' => $ltilinkid,
+                    'tag' => $tag
             ));
-        } catch (\Exception $e) {
+        } catch (\Exception $ex) {
+            debugging('Error adding an entry in ltiservice_gradebookservices:' . $ex->getMessage());
             throw new \Exception(null, 500);
         }
 
@@ -304,12 +337,33 @@ EOD;
             $item->iteminstance = $json->ltiLinkId;
         }
         $id = $item->insert('mod/ltiservice_gradebookservices');
-        $json->id = parent::get_endpoint() . "/{$id}/lineitem";
-        $json->results = parent::get_endpoint() . "/{$id}/results";
-        $json->scores = parent::get_endpoint() . "/{$id}/scores";
-
+        if (is_null($typeid)) {
+            $json->id = parent::get_endpoint() . "/{$id}/lineitem";
+            $json->results = parent::get_endpoint() . "/{$id}/results";
+            $json->scores = parent::get_endpoint() . "/{$id}/scores";
+        } else {
+            $json->id = parent::get_endpoint() . "/{$id}/lineitem?typeid={$typeid}";
+            $json->results = parent::get_endpoint() . "/{$id}/results?typeid={$typeid}";
+            $json->scores = parent::get_endpoint() . "/{$id}/scores?typeid={$typeid}";
+        }
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
+    }
+
+    /**
+     * get permissions from the config of the tool for that resource
+     *
+     * @return Array with the permissions related to this resource by the $lti_type or null if none.
+     */
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradesynchronization == '1') {
+            return array('LineItem.collection:get');
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
+            return array('LineItem.collection:get', 'LineItem.collection:post');
+        } else {
+            return array();
+        }
     }
 
     /**

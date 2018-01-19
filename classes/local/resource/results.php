@@ -74,10 +74,21 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
-
+        // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
+        } else {
+            $typeid = null;
+        }
         try {
-            if (!$this->check_tool_proxy(null, $response->get_request_data())) {
-                throw new \Exception(null, 401);
+            if (is_null($typeid)) {
+                if (!$this->check_tool_proxy(null, $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
+            } else {
+                if (!$this->check_type($typeid, $contextid,  'Result.collection:get', $response->get_request_data())) {
+                    throw new \Exception(null, 401);
+                }
             }
             if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
@@ -88,12 +99,19 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             if ($DB->get_record('grade_items', array('id' => $itemid)) === false) {
                 throw new \Exception(null, 404);
             }
-            if (($item = $this->get_service()->get_lineitem($contextid, $itemid)) === false) {
+            if (($item = $this->get_service()->get_lineitem($contextid, $itemid, $typeid)) === false) {
                 throw new \Exception(null, 403);
             }
-            if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
-                    $this->get_service()->get_tool_proxy()->id))) {
-                        throw new \Exception(null, 403);
+            if (is_null($typeid)) {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_id($item->iteminstance, $item->courseid,
+                        $this->get_service()->get_tool_proxy()->id))) {
+                            throw new \Exception(null, 403);
+                }
+            } else {
+                if (isset($item->iteminstance) && (!gradebookservices::check_lti_1x_id($item->iteminstance, $item->courseid,
+                        $typeid))) {
+                            throw new \Exception(null, 403);
+                }
             }
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
@@ -137,7 +155,6 @@ class results extends \mod_lti\local\ltiservice\resource_base {
      *
      * return string
      */
-
     private function get_request_json($itemid, $limitfrom, $limitnum, $useridfilter, $typeid, $response, $contextid) {
 
         if ($useridfilter > 0) {
@@ -202,8 +219,7 @@ class results extends \mod_lti\local\ltiservice\resource_base {
         }
 
         $json = <<< EOD
-{
-  "results" : [
+  [
 EOD;
         $lineitem = new lineitem($this->get_service());
         $endpoint = $lineitem->get_endpoint();
@@ -249,10 +265,9 @@ EOD;
         $json .= <<< EOD
 
   ]
-}
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
-            $links = 'links: <' . $firstpage . '>; rel=“first”';
+            $links = 'Link: <' . $firstpage . '>; rel=“first”';
             if (!(is_null($prevpage))) {
                 $links .= ', <' . $prevpage . '>; rel=“prev”';
             }
@@ -261,12 +276,26 @@ EOD;
                 $links .= ', <' . $nextpage . '>; rel=“next”';
             }
             $links .= ', <' . $lastpage . '>; rel=“last”';
-            // Disabled until add_additional_header is included in the core code.
-            // $response->add_additional_header($links);
+            $response->add_additional_header($links);
         }
         return $json;
     }
 
+    /**
+     * get permissions from the config of the tool for that resource
+     *
+     * @return Array with the permissions related to this resource by the $lti_type or null if none.
+     */
+    public function get_permissions($typeid) {
+        $tool = lti_get_type_type_config($typeid);
+        if ($tool->ltiservice_gradesynchronization == '1') {
+            return array('Result.collection:get');
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
+            return array('Result.collection:get');
+        } else {
+            return array();
+        }
+    }
 
     /**
      * Parse a value for custom parameter substitution variables.
@@ -277,7 +306,6 @@ EOD;
      */
     public function parse_value($value) {
         global $COURSE, $CFG;
-
         if (strpos($value, '$Results.url') !== false) {
             require_once($CFG->libdir . '/gradelib.php');
 
@@ -295,7 +323,6 @@ EOD;
             }
             $value = str_replace('$Results.url', $resolved, $value);
         }
-
         return $value;
     }
 }

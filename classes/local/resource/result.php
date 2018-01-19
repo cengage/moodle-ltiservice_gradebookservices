@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * This file contains a class definition for the LISResult container resource
+ * This file contains a class definition for the LISResult resource
  *
  * @package    ltiservice_gradebookservices
  * @copyright  2017 Cengage Learning http://www.cengage.com
@@ -31,14 +31,14 @@ use ltiservice_gradebookservices\local\service\gradebookservices;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * A resource implementing LISResult container.
+ * A resource implementing LISResult.
  *
  * @package    ltiservice_gradebookservices
  * @since      Moodle 3.0
  * @copyright  2017 Cengage Learning http://www.cengage.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class scores extends \mod_lti\local\ltiservice\resource_base {
+class result extends \mod_lti\local\ltiservice\resource_base {
 
     /**
      * Class constructor.
@@ -48,12 +48,11 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
     public function __construct($service) {
 
         parent::__construct($service);
-        $this->id = 'Score.collection';
-        $this->template = '/{context_id}/lineitems/{item_id}/scores';
-        $this->variables[] = 'Scores.url';
-        $this->formats[] = 'application/vnd.ims.lis.v1.scorecontainer+json';
-        $this->formats[] = 'application/vnd.ims.lis.v1.score+json';
-        $this->methods[] = 'POST';
+        $this->id = 'Result.item';
+        $this->template = '/{context_id}/lineitems/{item_id}/results/{result_id}/result';
+        $this->variables[] = 'Result.url';
+        $this->formats[] = 'application/vnd.ims.lis.v2.result+json';
+        $this->methods[] = 'GET';
 
     }
 
@@ -68,20 +67,16 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
         $params = $this->parse_template();
         $contextid = $params['context_id'];
         $itemid = $params['item_id'];
-
-        // GET is disabled by the moment, but we have the code ready
-        // for a future implementation.
-
+        $resultid = $params['result_id'];
         $isget = $response->get_request_method() === 'GET';
         if ($isget) {
             $contenttype = $response->get_accept();
         } else {
-            $contenttype = $response->get_content_type();
+            throw new \Exception(null, 405);
         }
-        $container = empty($contenttype) || ($contenttype === $this->formats[0]);
         // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
-        if (isset($_GET['type_id'])) {
-            $typeid = $_GET['type_id'];
+        if (isset($_GET['typeid'])) {
+            $typeid = $_GET['typeid'];
         } else {
             $typeid = null;
         }
@@ -91,21 +86,11 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                     throw new \Exception(null, 401);
                 }
             } else {
-                switch ($response->get_request_method()) {
-                    case 'GET':
-                        $response->set_code(405);
-                        break;
-                    case 'POST':
-                        if (!$this->check_type($typeid, $contextid, 'Score.collection:post', $response->get_request_data())) {
-                            throw new \Exception(null, 401);
-                        }
-                        break;
-                    default:  // Should not be possible.
-                        throw new \Exception(null, 405);
+                if (!$this->check_type($typeid, $contextid, 'Result.item:get', $response->get_request_data())) {
+                    throw new \Exception(null, 401);
                 }
             }
-            if (empty($contextid) || !($container ^ ($response->get_request_method() === 'POST')) ||
-                (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
+            if (empty($contextid) || (!empty($contenttype) && !in_array($contenttype, $this->formats))) {
                 throw new \Exception(null, 400);
             }
             if ($DB->get_record('course', array('id' => $contextid)) === false) {
@@ -129,18 +114,34 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                 }
             }
             require_once($CFG->libdir.'/gradelib.php');
-            switch ($response->get_request_method()) {
-                case 'GET':
-                    $response->set_code(405);
-                    break;
-                case 'POST':
-                    $json = $this->post_request_json($response, $response->get_request_data(), $item, $contextid, $typeid);
-                    $response->set_content_type($this->formats[1]);
-                    break;
-                default:  // Should not be possible.
-                    throw new \Exception(null, 405);
+
+            $response->set_content_type($this->formats[0]);
+            $grade = \grade_grade::fetch(array('itemid' => $itemid, 'userid' => $resultid));
+            if (!$grade) {
+                // If there is not grade but the user is allowed in the site
+                // create an empty answer.
+                if (gradebookservices::is_user_gradable_in_course($contextid, $resultid)) {
+                    $lineitems = new lineitems($this->get_service());
+                    $endpoint = $lineitems->get_endpoint();
+                    $result = new \stdClass();
+                    if (is_null($typeid)) {
+                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
+                        $result->scoreOf = $endpoint;
+                    } else {
+                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result?typeid={$typeid}";
+                        $result->scoreOf = "{$endpoint}?typeid={$typeid}";
+                    }
+                    $result->id = $id;
+                    $result->userId = $resultid;
+                    $json = json_encode($result, JSON_UNESCAPED_SLASHES);
+                    $response->set_body($json);
+                } else {
+                    throw new \Exception(null, 404);
+                }
+            } else {
+                $json = $this->get_request_json($grade, $resultid, $typeid);
+                $response->set_body($json);
             }
-            $response->set_body($json);
 
         } catch (\Exception $e) {
             $response->set_code($e->getCode());
@@ -149,73 +150,28 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
     }
 
     /**
-     * Generate the JSON for a POST request.
+     * Generate the JSON for a GET request.
      *
-     * @param mod_lti\local\ltiservice\response $response  Response object for this request.
-     * @param string $body       POST body
-     * @param string $item       Grade item instance
+     * @param object $grade       Grade instance
+     * @param object $resultid    The id of the result
      *
      * return string
      */
-    private function post_request_json($response, $body, $item, $contextid, $typeid) {
-        $result = json_decode($body);
-        if (empty($result) ||
-                !isset($result->userId) ||
-                !isset($result->timestamp) ||
-                !isset($result->gradingProgress) ||
-                !isset($result->activityProgress) ||
-                !isset($result->timestamp) ||
-                isset($result->timestamp) && !gradebookservices::validate_iso8601_date($result->timestamp) ||
-                (isset($result->scoreGiven) && !is_numeric($result->scoreGiven)) ||
-                (isset($result->scoreMaximum) && !is_numeric($result->scoreMaximum)) ||
-                (!gradebookservices::is_user_gradable_in_course($contextid, $result->userId))
-                ) {
-            throw new \Exception(null, 400);
-        }
-        $result->timemodified = intval($result->timestamp);
+    private function get_request_json($grade, $resultid, $typeid) {
 
-        if (!isset($result->scoreMaximum)) {
-            $result->scoreMaximum = 1;
-        }
-        $response->set_code(200);
-        $grade = \grade_grade::fetch(array('itemid' => $item->id, 'userid' => $result->userId));
-        if ($grade &&  !empty($grade->timemodified)) {
-            if ($grade->timemodified >= strtotime($result->timestamp)) {
-                throw new \Exception(null, 403);
-            }
-        }
-        if (isset($result->scoreGiven)) {
-            if ($result->gradingProgress == 'FullyGraded') {
-                gradebookservices::set_grade_item($item, $result, $result->userId, $typeid);
-            } else {
-                $this->reset_result($item, $result->userId);
-            }
+        $lineitem = new lineitem($this->get_service());
+        if (empty($grade->finalgrade)) {
+            $grade->userid = $resultid;
+            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint(), $typeid);
         } else {
-            $this->reset_result($item, $result->userId);
+            if (empty($grade->timemodified)) {
+                throw new \Exception(null, 400);
+            }
+            $json = gradebookservices::result_to_json($grade, $lineitem->get_endpoint(), $typeid);
         }
-    }
-
-    /**
-     * Reset a Result.
-     *
-     * @param object $item       Lineitem instance
-     * @param string  $userid    User ID
-     */
-    private function reset_result($item, $userid) {
-
-        $grade = new \stdClass();
-        $grade->userid = $userid;
-        $grade->rawgrade = null;
-        $grade->feedback = null;
-        $grade->feedbackformat = FORMAT_MOODLE;
-        $status = grade_update('mod/ltiservice_gradebookservices', $item->courseid, $item->itemtype, $item->itemmodule,
-                $item->iteminstance, $item->itemnumber, $grade);
-        if ($status !== GRADE_UPDATE_OK) {
-            throw new \Exception(null, 500);
-        }
+        return $json;
 
     }
-
 
     /**
      * get permissions from the config of the tool for that resource
@@ -225,9 +181,9 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
     public function get_permissions($typeid) {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradesynchronization == '1') {
-            return array('Score.collection:post');
+            return array('Result.item:get');
         } else if ($tool->ltiservice_gradesynchronization == '2') {
-            return array('Score.collection:post');
+            return array('Result.item:get');
         } else {
             return array();
         }
@@ -241,12 +197,12 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
      * @return string
      */
     public function parse_value($value) {
-        global $COURSE, $CFG;
+        global $COURSE, $USER, $CFG;
 
-        if (strpos($value, '$Scores.url') !== false) {
+        if (strpos($value, '$Result.url') !== false) {
             require_once($CFG->libdir . '/gradelib.php');
-
             $resolved = '';
+
             $this->params['context_id'] = $COURSE->id;
             $id = optional_param('id', 0, PARAM_INT); // Course Module ID.
             if (!empty($id)) {
@@ -255,10 +211,11 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                 $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
                 if ($item && $item->items) {
                     $this->params['item_id'] = $item->items[0]->id;
+                    $this->params['result_id'] = $USER->id;
                     $resolved = parent::get_endpoint();
                 }
             }
-            $value = str_replace('$Scores.url', $resolved, $value);
+            $value = str_replace('$Result.url', $resolved, $value);
         }
 
         return $value;
