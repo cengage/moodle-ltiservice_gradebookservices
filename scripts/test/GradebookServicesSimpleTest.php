@@ -35,8 +35,6 @@ $query_lineitem_put = false;
 $query_lineitem_delete = false;
 //SCORES
 $query_scores_post = false;
-//RESULT
-$query_result_get = false;
 //RESULTS
 $query_results_get = true;
 
@@ -57,7 +55,7 @@ $use_lti_link_id_put=false; //To decide if we will create a decoupled or coupled
 $lti_link_id_put=1;
 $score_score_of_post = "5";
 $score_id='2';
-$result_id = '2';
+$user_id = '2';
 
 //LINEITEMS
 $item_label_post='New Line';
@@ -96,6 +94,10 @@ $score_progress_post = "FullyGraded";
 // Include leading ? if provided. Can comment out to omit.
 // ?limit=5
 // ?limit=5&from=2      (from record offset, if provided, limit must be specified)
+$results_query_string='?user_id=' . $user_id;
+//$results_query_string='?user_id=' . $user_id. '&from=2';
+//$results_query_string='?user_id=' . $user_id. '&limit=3&from=2';
+//$results_query_string='?user_id=' . $user_id. '&limit=3';
 //$results_query_string='?from=2';
 //$results_query_string='?limit=3&from=2';
 //$results_query_string='?limit=3';
@@ -125,7 +127,7 @@ $postdata_lineitems_delete = null;
 $postdata_scores_post = '{"scoreGiven":'.$score_score_given_post.',"scoreMaximum":'.
 $score_score_maximum_post.',"comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post.'","timestamp":"'.$score_timestamp_post.'","userId":"'.$score_result_user_id.'"}';
 
-//Result and results are just a get
+//Results is just a get
 
 
 //////////////////
@@ -144,7 +146,6 @@ $url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores';
 if (!empty($scores_query_string)) {
   $url_scores = $url_scores . $scores_query_string;
 }
-$url_result = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/'. $result_id .'/result';
 $url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results';
 if (!empty($results_query_string)) {
   $url_results = $url_results . $results_query_string;
@@ -159,7 +160,6 @@ if (!empty($results_query_string)) {
 $lineitem_content = 'application/vnd.ims.lis.v2.lineitem+json';
 $lineitemcontainer_content = 'application/vnd.ims.lis.v2.lineitemcontainer+json';
 $scorecontainer_content = 'application/vnd.ims.lis.v1.scorecontainer+json';
-$result_content = 'application/vnd.ims.lis.v2.result+json';
 $resultcontainer_content = 'application/vnd.ims.lis.v1.resultcontainer+json';
 
 //////////////////
@@ -275,18 +275,6 @@ echo $postdata_scores_post;
 echo "\n";
 echo "\n";
 call_service($url_scores,$http_method_post,$score_content,$postdata_scores_post, $consumer_key, $secret);
-echo "\n";
-echo "--------------------------------------------------------------------------------\n";
-echo "\n";
-}
-
-//GET result
-if($query_result_get){
-echo "--------------------------------GET RESULT---------------------------------------\n";
-echo "URL: {$url_result}";
-echo "\n";
-echo "\n";
-call_service($url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
 echo "\n";
 echo "--------------------------------------------------------------------------------\n";
 echo "\n";
