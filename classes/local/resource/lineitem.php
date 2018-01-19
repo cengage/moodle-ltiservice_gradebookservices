@@ -251,7 +251,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
                     $baseurl = "{$endpoint}/{$item->id}/lineitem";
                 } else {
                     $toolproxyid = null;
-                    $baseurl = "{$endpoint}/{$item->id}/lineitem?typeid=" . $typeid;
+                    $baseurl = "{$endpoint}/{$item->id}/lineitem?type_id=" . $typeid;
                 }
                 $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array(
                         'id' => $gbs->id,
@@ -272,10 +272,10 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             $json->results = "{$endpoint}/{$item->id}/results";
             $json->scores = "{$endpoint}/{$item->id}/scores";
         } else {
-            $id = "{$endpoint}/{$item->id}/lineitem?typeid={$typeid}";
+            $id = "{$endpoint}/{$item->id}/lineitem?type_id={$typeid}";
             $json->id = $id;
-            $json->results = "{$endpoint}/{$item->id}/results?typeid={$typeid}";
-            $json->scores = "{$endpoint}/{$item->id}/scores?typeid={$typeid}";
+            $json->results = "{$endpoint}/{$item->id}/results?type_id={$typeid}";
+            $json->scores = "{$endpoint}/{$item->id}/scores?type_id={$typeid}";
         }
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 

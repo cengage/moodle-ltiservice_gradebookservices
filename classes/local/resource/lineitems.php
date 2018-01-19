@@ -342,9 +342,9 @@ EOD;
             $json->results = parent::get_endpoint() . "/{$id}/results";
             $json->scores = parent::get_endpoint() . "/{$id}/scores";
         } else {
-            $json->id = parent::get_endpoint() . "/{$id}/lineitem?typeid={$typeid}";
-            $json->results = parent::get_endpoint() . "/{$id}/results?typeid={$typeid}";
-            $json->scores = parent::get_endpoint() . "/{$id}/scores?typeid={$typeid}";
+            $json->id = parent::get_endpoint() . "/{$id}/lineitem?type_id={$typeid}";
+            $json->results = parent::get_endpoint() . "/{$id}/results?type_id={$typeid}";
+            $json->scores = parent::get_endpoint() . "/{$id}/scores?type_id={$typeid}";
         }
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
