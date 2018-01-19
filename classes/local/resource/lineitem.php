@@ -94,7 +94,8 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    $this->get_request($response, $contextid, $item);
+                    $typeid = optional_param('type_id', null, PARAM_TEXT);
+                    $this->get_request($response, $contextid, $item, $typeid);
                     break;
                 case 'PUT':
                     $json = $this->put_request($response->get_request_data(), $item);
@@ -122,11 +123,11 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      * @param boolean $results   True if results are to be included in the response.
      * @param string  $item       Grade item instance.
      */
-    private function get_request($response, $contextid, $item) {
+    private function get_request($response, $contextid, $item, $typeid) {
 
         $response->set_content_type($this->formats[0]);
         $json = gradebookservices::item_to_json($item, substr(parent::get_endpoint(),
-                0, strrpos(parent::get_endpoint(), "/", -10)));
+                0, strrpos(parent::get_endpoint(), "/", -10)), $typeid);
         $response->set_body($json);
 
     }

@@ -63,7 +63,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         if (empty($this->resources)) {
             $this->resources = array();
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitem($this);
-            $this->resources[] = new \ltiservice_gradebookservices\local\resource\result($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitems($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\results($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\scores($this);
@@ -85,7 +84,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return array
      */
-    public function get_lineitems($courseid, $resourceid, $ltilinkid, $limitfrom, $limitnum) {
+    public function get_lineitems($courseid, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum) {
         global $DB;
 
         // Select all lti potential linetiems in site.
@@ -103,9 +102,14 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             $optionalfilters .= " AND (i.iteminstance = :ltilinkid)";
             $params['ltilinkid'] = $ltilinkid;
         }
+        if (isset($tag)) {
+            $optionalfilters .= " AND (s.tag = :tag)";
+            $params['tag'] = $tag;
+        }
 
-        $sql = "SELECT i.*
+        $sql = "SELECT i.*, s.tag
         FROM {grade_items} i
+        LEFT JOIN {ltiservice_gradebookservices} s ON i.itemnumber = s.id
         WHERE (i.courseid = :courseid)
         AND (i.itemtype = :itemtype)
         AND (i.itemmodule = :itemmodule)
@@ -272,15 +276,20 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      * @param string  $endpoint           Endpoint for lineitems container request
      * @return string
      */
-    public static function item_to_json($item, $endpoint) {
+    public static function item_to_json($item, $endpoint, $typeid) {
 
         $lineitem = new \stdClass();
-        $lineitem->id = "{$endpoint}/{$item->id}/lineitem";
+        if (is_null($typeid)) {
+            $typeidstring = "";
+        } else {
+            $typeidstring = "/?type_id={$typeis}";
+        }
+        $lineitem->id = "{$endpoint}/{$item->id}/lineitem. $typeidstring";
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
         $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
-        $lineitem->results = "{$endpoint}/{$item->id}/results";
-        $lineitem->scores = "{$endpoint}/{$item->id}/scores";
+        $lineitem->results = "{$endpoint}/{$item->id}/results" . $typeidstring;
+        $lineitem->scores = "{$endpoint}/{$item->id}/scores". $typeidstring;
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
             $lineitem->ltiLinkId = strval($item->iteminstance);
@@ -296,13 +305,18 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @param object  $grade              Grade record
      * @param string  $endpoint           Endpoint for lineitem
+     * @param int  $typeid                The id of the type to include in the result url.
      *
      * @return string
      */
-    public static function result_to_json($grade, $endpoint) {
+    public static function result_to_json($grade, $endpoint, $typeid) {
 
         $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
-        $id = "{$endpoint}/results/{$grade->userid}/result";
+        if (is_null($typeid)) {
+            $id = "{$endpoint}/results?user_id={$grade->userid}";
+        } else {
+            $id = "{$endpoint}/results?type_id={$typeis}&user_id={$grade->userid}";
+        }
         $result = new \stdClass();
         $result->id = $id;
         $result->userId = $grade->userid;
