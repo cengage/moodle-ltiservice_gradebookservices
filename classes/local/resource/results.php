@@ -74,7 +74,6 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             $contenttype = $response->get_content_type();
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
-
         try {
             if (!$this->check_tool_proxy(null, $response->get_request_data())) {
                 throw new \Exception(null, 401);
@@ -107,9 +106,8 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                         gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $typeid = optional_param('type_id', null, PARAM_TEXT);
                     $json = $this->get_request_json($item->id, $limitfrom, $limitnum,
-                            $useridfilter, $typeid, $response, $contextid);
+                            $useridfilter, null, $response, $contextid);
                     $response->set_content_type($this->formats[0]);
                     $response->set_body($json);
                     break;
@@ -252,7 +250,7 @@ EOD;
 }
 EOD;
         if (isset($canonicalpage) && ($canonicalpage)) {
-            $links = 'links: <' . $firstpage . '>; rel=“first”';
+            $links = 'Link: <' . $firstpage . '>; rel=“first”';
             if (!(is_null($prevpage))) {
                 $links .= ', <' . $prevpage . '>; rel=“prev”';
             }

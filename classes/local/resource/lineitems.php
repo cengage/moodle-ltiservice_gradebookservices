@@ -94,7 +94,6 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
                     $ltilinkid = optional_param('lti_link_id', null, PARAM_TEXT);
                     $tag = optional_param('tag', null, PARAM_TEXT);
-                    $typeid = optional_param('type_id', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -104,11 +103,11 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
                     $itemsandcount = $this->get_service()->get_lineitems($contextid, $resourceid, $ltilinkid, $tag, $limitfrom,
-                            $limitnum, $typeid);
+                            $limitnum, null);
                     $items = $itemsandcount[1];
                     $totalcount = $itemsandcount[0];
                     $json = $this->get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom,
-                            $limitnum, $totalcount, $typeid, $response);
+                            $limitnum, $totalcount, null, $response);
                     $response->set_content_type($this->formats[0]);
                     break;
                 case 'POST':

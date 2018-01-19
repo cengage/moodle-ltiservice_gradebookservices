@@ -94,8 +94,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    $typeid = optional_param('type_id', null, PARAM_TEXT);
-                    $this->get_request($response, $contextid, $item, $typeid);
+                    $this->get_request($response, $contextid, $item, null);
                     break;
                 case 'PUT':
                     $json = $this->put_request($response->get_request_data(), $item);
