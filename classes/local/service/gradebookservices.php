@@ -63,7 +63,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         if (empty($this->resources)) {
             $this->resources = array();
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitem($this);
-            $this->resources[] = new \ltiservice_gradebookservices\local\resource\result($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\lineitems($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\results($this);
             $this->resources[] = new \ltiservice_gradebookservices\local\resource\scores($this);
@@ -199,7 +198,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @return array
      */
-    public function get_lineitems($courseid, $resourceid, $ltilinkid, $limitfrom, $limitnum, $typeid) {
+    public function get_lineitems($courseid, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum, $typeid) {
         global $DB;
 
         // Select all lti potential linetiems in site.
@@ -214,9 +213,14 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             $optionalfilters .= " AND (i.iteminstance = :ltilinkid)";
             $params['ltilinkid'] = $ltilinkid;
         }
+        if (isset($tag)) {
+            $optionalfilters .= " AND (s.tag = :tag)";
+            $params['tag'] = $tag;
+        }
 
-        $sql = "SELECT i.*
+        $sql = "SELECT i.*, s.tag
         FROM {grade_items} i
+        LEFT JOIN {ltiservice_gradebookservices} s ON i.itemnumber = s.id
         WHERE (i.courseid = :courseid)
         AND (i.itemtype = :itemtype)
         AND (i.itemmodule = :itemmodule)
@@ -420,20 +424,16 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $lineitem = new \stdClass();
         if (is_null($typeid)) {
-            $lineitem->id = "{$endpoint}/{$item->id}/lineitem";
+            $typeidstring = "";
         } else {
-            $lineitem->id = "{$endpoint}/{$item->id}/lineitem?typeid={$typeid}";
+            $typeidstring = "?type_id={$typeis}";
         }
+        $lineitem->id = "{$endpoint}/{$item->id}/lineitem. $typeidstring";
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
         $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
-        if (is_null($typeid)) {
-            $lineitem->results = "{$endpoint}/{$item->id}/results";
-            $lineitem->scores = "{$endpoint}/{$item->id}/scores";
-        } else {
-            $lineitem->results = "{$endpoint}/{$item->id}/results?typeid={$typeid}";
-            $lineitem->scores = "{$endpoint}/{$item->id}/scores?typeid={$typeid}";
-        }
+        $lineitem->results = "{$endpoint}/{$item->id}/results" . $typeidstring;
+        $lineitem->scores = "{$endpoint}/{$item->id}/scores". $typeidstring;
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
             $lineitem->ltiLinkId = strval($item->iteminstance);
@@ -449,6 +449,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      *
      * @param object  $grade              Grade record
      * @param string  $endpoint           Endpoint for lineitem
+     * @param int  $typeid                The id of the type to include in the result url.
      *
      * @return string
      */
@@ -456,9 +457,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
         if (is_null($typeid)) {
-            $id = "{$endpoint}/results/{$grade->userid}/result";
+            $id = "{$endpoint}/results?user_id={$grade->userid}";
         } else {
-            $id = "{$endpoint}/results/{$grade->userid}/result?typeid={$typeid}";
+            $id = "{$endpoint}/results?type_id={$typeis}&user_id={$grade->userid}";
         }
         $result = new \stdClass();
         $result->id = $id;

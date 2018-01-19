@@ -75,8 +75,8 @@ class results extends \mod_lti\local\ltiservice\resource_base {
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
         // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
-        if (isset($_GET['typeid'])) {
-            $typeid = $_GET['typeid'];
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
         } else {
             $typeid = null;
         }
@@ -119,12 +119,15 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
+                    $useridfilter = optional_param('user_id', 0, PARAM_INT);
                     $limitnum = optional_param('limit', 0, PARAM_INT);
                     if (isset($_GET['from'])) {
                         gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum, $typeid, $response);
+                    $typeid = optional_param('type_id', null, PARAM_TEXT);
+                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum,
+                            $useridfilter, $typeid, $response, $contextid);
                     $response->set_content_type($this->formats[0]);
                     $response->set_body($json);
                     break;
@@ -145,14 +148,20 @@ class results extends \mod_lti\local\ltiservice\resource_base {
      * @param int    $itemid     Grade item instance ID
      * @param string $limitfrom  Offset for the first result to include in this paged set
      * @param string $limitnum   Maximum number of results to include in the response, ignored if zero
+     * @param int    $useridfilter     The user id to filter the results.
      * @param int    $typeid     Lti tool typeid (or null)
      * @param string $response   The response element needed to add a header.
+     * @param string $contextid  The course to check if the user in useridfilter is allowed in the site
      *
      * return string
      */
-    private function get_request_json($itemid, $limitfrom, $limitnum, $typeid, $response) {
+    private function get_request_json($itemid, $limitfrom, $limitnum, $useridfilter, $typeid, $response, $contextid) {
 
-        $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
+        if ($useridfilter > 0) {
+            $grades = \grade_grade::fetch_all(array('itemid' => $itemid, 'userid' => $useridfilter));
+        } else {
+            $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
+        }
 
         if ($grades && isset($limitnum) && $limitnum > 0) {
             // Since we only display grades that have been modified, we need to filter first in order to support
@@ -175,15 +184,15 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             } else {
                 $outofrange = false;
             }
-            $limitprev = $limitfrom - $limitnum >=0 ? $limitfrom - $limitnum : 0;
-            $limitcurrent= $limitfrom;
-            $limitlast = $totalcount-$limitnum+1 >= 0 ? $totalcount-$limitnum+1: 0;
+            $limitprev = $limitfrom - $limitnum >= 0 ? $limitfrom - $limitnum : 0;
+            $limitcurrent = $limitfrom;
+            $limitlast = $totalcount - $limitnum + 1 >= 0 ? $totalcount - $limitnum + 1 : 0;
             $limitfrom += $limitnum;
             if (is_null($typeid)) {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
                     $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
                 } else {
-                    $nextpage= null;
+                    $nextpage = null;
                 }
                 $firstpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=0";
                 $canonicalpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitcurrent;
@@ -194,15 +203,15 @@ class results extends \mod_lti\local\ltiservice\resource_base {
                     $prevpage = null;
                 }
             } else {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
-                    $nextpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
+                    $nextpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
                 } else {
-                    $nextpage= null;
+                    $nextpage = null;
                 }
-                $firstpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=0";
-                $canonicalpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
+                $firstpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=0";
+                $canonicalpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
                 if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
+                    $prevpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
                 } else {
                     $prevpage = null;
                 }
@@ -220,7 +229,37 @@ EOD;
                 if (!empty($grade->timemodified)) {
                     $json .= $sep . gradebookservices::result_to_json($grade, $endpoint, $typeid);
                     $sep = ",\n        ";
+                } else if ($useridfilter > 0) {
+                    // If there is not grade but the user is allowed in the site
+                    // create an empty answer.
+                    if (gradebookservices::is_user_gradable_in_course($contextid, $useridfilter)) {
+                        $lineitems = new lineitems($this->get_service());
+                        $endpoint = $lineitems->get_endpoint();
+                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
+                        $result = new \stdClass();
+                        $result->id = $id;
+                        $result->userId = $resultid;
+                        $result->scoreOf = $endpoint;
+                        $json .= json_encode($result, JSON_UNESCAPED_SLASHES);
+                        // } else {
+                        // throw new \Exception(null, 404);
+                    }
                 }
+            }
+        } else if ($useridfilter > 0) {
+            // If there is not grade but the user is allowed in the site
+            // create an empty answer.
+            if (gradebookservices::is_user_gradable_in_course($contextid, $useridfilter)) {
+                $lineitems = new lineitems($this->get_service());
+                $endpoint = $lineitems->get_endpoint();
+                $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
+                $result = new \stdClass();
+                $result->id = $id;
+                $result->userId = $resultid;
+                $result->scoreOf = $endpoint;
+                $json .= json_encode($result, JSON_UNESCAPED_SLASHES);
+                // } else {
+                // throw new \Exception(null, 404);
             }
         }
         $json .= <<< EOD

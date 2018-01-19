@@ -75,8 +75,8 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         }
         $isdelete = $response->get_request_method() === 'DELETE';
         // We will receive typeid when working with LTI 1.x, if not then we are in LTI 2.
-        if (isset($_GET['typeid'])) {
-            $typeid = $_GET['typeid'];
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
         } else {
             $typeid = null;
         }

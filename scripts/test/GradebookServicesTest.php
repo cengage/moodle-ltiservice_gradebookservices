@@ -109,7 +109,7 @@ $lti_link_id_post=$_GET['ltilinkid'];
 
 
 /////////////////////////////
-// PAGING AND FILTERING
+// PAGING AND FILTERING AND OTHER QUERY PARAMETERS
 /////////////////////////////
 
 //Uncomment the $line_items_query_string, $scores_query_string and or $results_query_string to test with pagination
@@ -132,9 +132,17 @@ $lti_link_id_post=$_GET['ltilinkid'];
 
 // RESULTS PAGING
 // Include leading ? if provided. Can comment out to omit.
-// ?limit=5
-// ?limit=5&from=2      (from record offset, if provided, limit must be specified)
+
+//$results_query_string='?from=2';
+//$results_query_string='?limit=3&from=2';
 //$results_query_string='?limit=3';
+
+// RESULT (RESULTS FILTERED BY USERID)
+// Dont include leading ? just &.
+
+//$results_query_string='&from=2';
+//$results_query_string='&limit=3&from=2';
+//$results_query_string='&limit=3';
 
 
 //////////////////////////
@@ -157,7 +165,6 @@ $score_progress_post_non_fully_graded = "Pending";
 $lineitem_content = 'application/vnd.ims.lis.v2.lineitem+json';
 $lineitemcontainer_content = 'application/vnd.ims.lis.v2.lineitemcontainer+json';
 $scorecontainer_content = 'application/vnd.ims.lis.v1.scorecontainer+json';
-$result_content = 'application/vnd.ims.lis.v2.result+json';
 $resultcontainer_content = 'application/vnd.ims.lis.v1.resultcontainer+json';
 
 //////////////////
@@ -221,7 +228,7 @@ $postdata_scores_post_non_fully_graded = '{"scoreGiven":'.$score_score_given_pos
 $score_score_maximum_post.',"comment":"'.$score_comment_post.'","activityProgress":"'.$score_activity_progress_post.'","gradingProgress":"'.$score_progress_post_non_fully_graded.'","timestamp":"'.$score_timestamp_post.'","userId":"'.$result_id.'"}';
 
 
-//Result and results are just a get
+//results is just a get
 
 
 
@@ -239,7 +246,12 @@ $url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores';
 if (!empty($scores_query_string)) {
   $url_scores = $url_scores . $scores_query_string;
 }
-$url_result = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/'. $result_id .'/result';
+//result is jusr results but filtered by userid
+$url_result = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results?user_id=' . $result_id;
+if (!empty($result_query_string)) {
+    $url_result = $url_result . $result_query_string;
+}
+
 $url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results';
 if (!empty($results_query_string)) {
   $url_results = $url_results . $results_query_string;
@@ -733,7 +745,7 @@ EXPECTED: 200 return the results list
 
 if ($test_number==12){
 
-/*TEST 12: RESULT: ERROR TESTS with GET
+/*TEST 12: RESULTS filteres by userid (filtered: ERROR TESTS with GET
 TEST #1  Try to get the result in a course that doesn’t exists
 EXPECTED: 404
 TEST #2  Try to get the result from a lineitem that doesn’t exists
@@ -744,12 +756,12 @@ TEST #4  Try to get the result from a user that has not results yet
 EXPECTED: 200, return empty result.
 */
 
-$url_result_test1 = $base_url . '1500000/lineitems/' . $lineitem_id . '/results/'. $result_id .'/result';
-$url_result_test2 = $base_url . $course_id . '/lineitems/150000/results/'. $result_id .'/result';
-$url_result_test3 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/1500000/result';
+$url_result_test1 = $base_url . '1500000/lineitems/' . $lineitem_id . '/results?user_id='. $result_id;
+$url_result_test2 = $base_url . $course_id . '/lineitems/150000/results?user_id=/'. $result_id .'';
+$url_result_test3 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results?user_id=1500000';
 
 $url_score_test4 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores/'. $result_id2 .'/score';
-$url_result_test4 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results/'. $result_id2 .'/result';
+$url_result_test4 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results?user_id='. $result_id2;
 
     echo "TEST 12.1: Try to get the result in a course that doesn’t exists \n";
         echo "EXPECTED RESULT: 404 \n";
@@ -773,7 +785,7 @@ $url_result_test4 = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/re
 
 if ($test_number==13){
 
-/*TEST 13: RESULT: SUCCESS TESTS with GET
+/*TEST 13: RESULTS FILTERES BY USER ID: SUCCESS TESTS with GET
 TEST #1  Try to get the result in a course and lineitem and user with results
 EXPECTED: 200 return the result
 */
@@ -979,22 +991,22 @@ $lineitemnogbsnoproxytype0_id = $_GET['lineitemnogbsnoproxytype0'];
 
     echo "TEST 20.1: Try to get the result from a non-gbs lineitem related with our tool proxy \n";
     echo "EXPECTED RESULT:  200 get the result \n";
-    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbs_id . '/results/'. $result_id .'/result';
+    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbs_id . '/results?user_id'. $result_id;
     call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
     
     echo "TEST 20.2: Try to get the result from a non-gbs lineitem non related with our tool proxy \n";
     echo "EXPECTED RESULT:  403 \n";
-    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxy_id . '/results/'. $result_id .'/result';
+    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxy_id . '/results?user_id'. $result_id;
     call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
 
     echo "TEST 20.3: Try to get the result from a non-gbs lineitem related with our tool proxy but with type = 0 \n";
     echo "EXPECTED RESULT:  200 get the result \n";
-    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbstype0_id . '/results/'. $result_id .'/result';
+    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbstype0_id . '/results?user_id'. $result_id;
     call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
 
     echo "TEST 20.4: Try to get the result from a non-gbs lineitem non related with our tool proxy with type = 0 \n";
     echo "EXPECTED RESULT:  403 \n";
-    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxytype0_id . '/results/'. $result_id .'/result';
+    $url_result = $base_url . $course_id . '/lineitems/' . $lineitemnogbsnoproxytype0_id . '/results?user_id'. $result_id;
     call_service('GET RESULT', $url_result, $http_method_get, $result_content, $postdata_false, $consumer_key, $secret);
 
 }

@@ -80,8 +80,8 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
         // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
-        if (isset($_GET['typeid'])) {
-            $typeid = $_GET['typeid'];
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
         } else {
             $typeid = null;
         }

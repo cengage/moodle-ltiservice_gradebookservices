@@ -76,8 +76,8 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         }
         $container = empty($contenttype) || ($contenttype === $this->formats[0]);
         // We will receive typeid when working with LTI 1.x, if not the we are in LTI 2.
-        if (isset($_GET['typeid'])) {
-            $typeid = $_GET['typeid'];
+        if (isset($_GET['type_id'])) {
+            $typeid = $_GET['type_id'];
         } else {
             $typeid = null;
         }
@@ -114,6 +114,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
                     $ltilinkid = optional_param('lti_link_id', null, PARAM_TEXT);
+                    $tag = optional_param('tag', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -122,11 +123,11 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                         gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $itemsandcount = $this->get_service()->get_lineitems($contextid, $resourceid, $ltilinkid, $limitfrom,
+                    $itemsandcount = $this->get_service()->get_lineitems($contextid, $resourceid, $ltilinkid, $tag, $limitfrom,
                             $limitnum, $typeid);
                     $items = $itemsandcount[1];
                     $totalcount = $itemsandcount[0];
-                    $json = $this->get_request_json($contextid, $items, $resourceid, $ltilinkid, $limitfrom,
+                    $json = $this->get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom,
                             $limitnum, $totalcount, $typeid, $response);
                     $response->set_content_type($this->formats[0]);
                     break;
@@ -152,14 +153,15 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param string $contextid      Course ID
      * @param array  $items          Array of lineitems
      * @param string $resourceid     Resource identifier used for filtering, may be null
-     * @param string $ltilinkid Resource Link identifier used for filtering, may be null
+     * @param string $ltilinkid      Resource Link identifier used for filtering, may be null
+     * @param string $tag            Tag identifier used for filtering, may be null
      * @param int    $limitfrom      Offset of the first line item to return
      * @param int    $limitnum       Maximum number of line items to return, ignored if zero or less
      * @param int    $totalcount     Number of total lineitems before filtering for paging
      * @param int    $typeid         Maximum number of line items to return, ignored if zero or less
      * return string
      */
-    private function get_request_json($contextid, $items, $resourceid, $ltilinkid, $limitfrom, $limitnum, $totalcount, $typeid, $response) {
+    private function get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum, $totalcount, $typeid, $response) {
 
         if (isset($limitnum) && $limitnum > 0) {
             if ($limitfrom >= $totalcount || $limitfrom < 0) {
@@ -167,52 +169,52 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             } else {
                 $outofrange = false;
             }
-            $limitprev = $limitfrom - $limitnum >=0 ? $limitfrom - $limitnum : 0;
-            $limitcurrent= $limitfrom;
-            $limitlast = $totalcount-$limitnum+1 >= 0 ? $totalcount-$limitnum+1: 0;
+            $limitprev = $limitfrom - $limitnum >= 0 ? $limitfrom - $limitnum : 0;
+            $limitcurrent = $limitfrom;
+            $limitlast = $totalcount - $limitnum + 1 >= 0 ? $totalcount - $limitnum + 1 : 0;
             $limitfrom += $limitnum;
             if (is_null($typeid)) {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
                     $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
                 } else {
-                    $nextpage= null;
+                    $nextpage = null;
                 }
                 $firstpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=0";
                 $canonicalpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitcurrent;
                 $lastpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitlast;
-                if (($limitcurrent> 0) && (!$outofrange)) {
+                if (($limitcurrent > 0) && (!$outofrange)) {
                     $prevpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitprev;
                 } else {
                     $prevpage = null;
                 }
             } else {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
-                    $nextpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
+                    $nextpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
                 } else {
-                    $nextpage= null;
+                    $nextpage = null;
                 }
-                $firstpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=0";
-                $canonicalpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
-                $lastpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitlast;
-                if (($limitcurrent> 0) && (!$outofrange)) {
-                    $prevpage = $this->get_endpoint() . "?typeid=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
+                $firstpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=0";
+                $canonicalpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
+                $lastpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitlast;
+                if (($limitcurrent > 0) && (!$outofrange)) {
+                    $prevpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
                 } else {
                     $prevpage = null;
                 }
             }
             if (isset($resourceid)) {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
                     $nextpage .= "&resource_id={$resourceid}";
                 }
                 $firstpage .= "&resource_id={$resourceid}";
                 $canonicalpage .= "&resource_id={$resourceid}";
                 $lastpage .= "&resource_id={$resourceid}";
-                if (($limitcurrent> 0) && (!$outofrange)) {
+                if (($limitcurrent > 0) && (!$outofrange)) {
                     $prevpage .= "&resource_id={$resourceid}";
                 }
             }
             if (isset($ltilinkid)) {
-                if (($limitfrom <= $totalcount -1) && (!$outofrange)) {
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
                     $nextpage .= "&lti_link_id={$ltilinkid}";
                 }
                 $firstpage .= "&lti_link_id={$ltilinkid}";
@@ -220,6 +222,17 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                 $lastpage .= "&lti_link_id={$ltilinkid}";
                 if (($limitcurrent > 0) && (!$outofrange)) {
                     $prevpage .= "&lti_link_id={$ltilinkid}";
+                }
+            }
+            if (isset($tag)) {
+                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
+                    $nextpage .= "&tag={$tag}";
+                }
+                $firstpage .= "&tag={$tag}";
+                $canonicalpage .= "&tag={$tag}";
+                $lastpage .= "&tag={v}";
+                if (($limitcurrent > 0) && (!$outofrange)) {
+                    $prevpage .= "&tag={$tag}";
                 }
             }
         }
