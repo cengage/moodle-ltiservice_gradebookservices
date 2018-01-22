@@ -229,37 +229,7 @@ EOD;
                 if (!empty($grade->timemodified)) {
                     $json .= $sep . gradebookservices::result_to_json($grade, $endpoint, $typeid);
                     $sep = ",\n        ";
-                } else if ($useridfilter > 0) {
-                    // If there is not grade but the user is allowed in the site
-                    // create an empty answer.
-                    if (gradebookservices::is_user_gradable_in_course($contextid, $useridfilter)) {
-                        $lineitems = new lineitems($this->get_service());
-                        $endpoint = $lineitems->get_endpoint();
-                        $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
-                        $result = new \stdClass();
-                        $result->id = $id;
-                        $result->userId = $resultid;
-                        $result->scoreOf = $endpoint;
-                        $json .= json_encode($result, JSON_UNESCAPED_SLASHES);
-                        // } else {
-                        // throw new \Exception(null, 404);
-                    }
                 }
-            }
-        } else if ($useridfilter > 0) {
-            // If there is not grade but the user is allowed in the site
-            // create an empty answer.
-            if (gradebookservices::is_user_gradable_in_course($contextid, $useridfilter)) {
-                $lineitems = new lineitems($this->get_service());
-                $endpoint = $lineitems->get_endpoint();
-                $id = "{$endpoint}/{$itemid}/results/{$resultid}/result";
-                $result = new \stdClass();
-                $result->id = $id;
-                $result->userId = $resultid;
-                $result->scoreOf = $endpoint;
-                $json .= json_encode($result, JSON_UNESCAPED_SLASHES);
-                // } else {
-                // throw new \Exception(null, 404);
             }
         }
         $json .= <<< EOD
