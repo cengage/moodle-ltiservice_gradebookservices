@@ -175,9 +175,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
                 }
                 $launchparameters['custom_lineitems_url'] = $endpoint . "?type_id={$typeid}";
                 if (!is_null($id)) {
-                    $launchparameters['custom_results_url'] = $endpoint . "/{$id}/results?type_id={$typeid}";
                     $launchparameters['custom_lineitem_url'] = $endpoint . "/{$id}/lineitem?type_id={$typeid}";
-                    $launchparameters['custom_scores_url'] = $endpoint . "/{$id}/scores?type_id={$typeid}";
                 }
             }
         }
@@ -429,8 +427,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
         $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
-        $lineitem->results = "{$endpoint}/{$item->id}/results" . $typeidstring;
-        $lineitem->scores = "{$endpoint}/{$item->id}/scores". $typeidstring;
         $lineitem->tag = (!empty($item->tag)) ? $item->tag : '';
         if (isset($item->iteminstance)) {
             $lineitem->ltiLinkId = strval($item->iteminstance);
