@@ -221,8 +221,6 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         $endpoint = $lineitem->get_endpoint();
         $id = "{$endpoint}/{$item->id}/lineitem";
         $json->id = $id;
-        $json->results = "{$endpoint}/{$item->id}/results";
-        $json->scores = "{$endpoint}/{$item->id}/scores";
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
     }
