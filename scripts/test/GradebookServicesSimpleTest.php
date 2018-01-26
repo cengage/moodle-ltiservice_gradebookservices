@@ -142,11 +142,11 @@ if (!empty($line_items_query_string)) {
   $url_lineitems = $url_lineitems . $line_items_query_string;
 }
 $url_lineitem = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/lineitem';
-$url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/scores';
+$url_scores = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/lineitem/scores';
 if (!empty($scores_query_string)) {
   $url_scores = $url_scores . $scores_query_string;
 }
-$url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/results';
+$url_results = $base_url . $course_id . '/lineitems/' . $lineitem_id . '/lineitem/results';
 if (!empty($results_query_string)) {
   $url_results = $url_results . $results_query_string;
 }

@@ -160,7 +160,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         // only inject parameters if the service is enabled for this tool
         if ($tool->ltiservice_gradesynchronization == '1' || $tool->ltiservice_gradesynchronization == '2') {
             // check for used in context is only needed because there is no explicit site tool - course relation
-            if ($this->is_used_in_context($typeid, $courseid)) {
+            if ($this->is_allowed_in_context($typeid, $courseid)) {
                 $endpoint = $this->get_service_path() . "/{$courseid}/lineitems";
                 if (is_null($modlti)) {
                     $id = null;
@@ -421,9 +421,9 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         if (is_null($typeid)) {
             $typeidstring = "";
         } else {
-            $typeidstring = "?type_id={$typeis}";
+            $typeidstring = "?type_id={$typeid}";
         }
-        $lineitem->id = "{$endpoint}/{$item->id}/lineitem. $typeidstring";
+        $lineitem->id = "{$endpoint}/{$item->id}/lineitem" . $typeidstring;
         $lineitem->label = $item->itemname;
         $lineitem->scoreMaximum = intval($item->grademax); // TODO: is int correct?!?
         $lineitem->resourceId = (!empty($item->idnumber)) ? $item->idnumber : '';
@@ -448,7 +448,6 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
      */
     public static function result_to_json($grade, $endpoint, $typeid) {
 
-        $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
         if (is_null($typeid)) {
             $id = "{$endpoint}/results?user_id={$grade->userid}";
         } else {

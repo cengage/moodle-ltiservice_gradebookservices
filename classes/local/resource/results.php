@@ -49,9 +49,9 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
         parent::__construct($service);
         $this->id = 'Result.collection';
-        $this->template = '/{context_id}/lineitems/{item_id}/results';
+        $this->template = '/{context_id}/lineitems/{item_id}/lineitem/results';
         $this->variables[] = 'Results.url';
-        $this->formats[] = 'application/vnd.ims.lis.v1.resultcontainer+json';
+        $this->formats[] = 'application/vnd.ims.lis.v2.resultcontainer+json';
         $this->methods[] = 'GET';
     }
 
