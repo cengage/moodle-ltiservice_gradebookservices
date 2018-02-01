@@ -161,7 +161,8 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param int    $typeid         Maximum number of line items to return, ignored if zero or less
      * return string
      */
-    private function get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum, $totalcount, $typeid, $response) {
+    private function get_request_json($contextid, $items, $resourceid, $ltilinkid,
+            $tag, $limitfrom, $limitnum, $totalcount, $typeid, $response) {
 
         if (isset($limitnum) && $limitnum > 0) {
             if ($limitfrom >= $totalcount || $limitfrom < 0) {
@@ -309,8 +310,25 @@ EOD;
             $toolproxyid = null;
             $baseurl = lti_get_type_type_config($typeid)->lti_toolurl;
         }
+        $params = array();
+        $params['itemname'] = $json->label;
+        $params['gradetype'] = GRADE_TYPE_VALUE;
+        $params['grademax']  = $max;
+        $params['grademin']  = 0;
+        $item = new \grade_item(array('id' => 0, 'courseid' => $contextid));
+        \grade_item::set_properties($item, $params);
+        $item->itemtype = 'mod';
+        $item->itemmodule = 'lti';
+        $item->itemnumber = get_next_itemnumber();
+        $item->idnumber = $resourceid;
+        if (isset($json->ltiLinkId) && is_numeric($json->ltiLinkId)) {
+            $item->iteminstance = $json->ltiLinkId;
+        }
+        $id = $item->insert('mod/ltiservice_gradebookservices');
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
+                    'itemnumber' => $item->itemnumber,
+                    'courseid' => $contextid,
                     'toolproxyid' => $toolproxyid,
                     'typeid' => $typeid,
                     'baseurl' => $baseurl,
@@ -321,22 +339,6 @@ EOD;
             debugging('Error adding an entry in ltiservice_gradebookservices:' . $ex->getMessage());
             throw new \Exception(null, 500);
         }
-
-        $params = array();
-        $params['itemname'] = $json->label;
-        $params['gradetype'] = GRADE_TYPE_VALUE;
-        $params['grademax']  = $max;
-        $params['grademin']  = 0;
-        $item = new \grade_item(array('id' => 0, 'courseid' => $contextid));
-        \grade_item::set_properties($item, $params);
-        $item->itemtype = 'mod';
-        $item->itemmodule = 'lti';
-        $item->itemnumber = $gradebookservicesid;
-        $item->idnumber = $resourceid;
-        if (isset($json->ltiLinkId) && is_numeric($json->ltiLinkId)) {
-            $item->iteminstance = $json->ltiLinkId;
-        }
-        $id = $item->insert('mod/ltiservice_gradebookservices');
         if (is_null($typeid)) {
             $json->id = parent::get_endpoint() . "/{$id}/lineitem";
         } else {

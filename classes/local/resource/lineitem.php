@@ -248,13 +248,15 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             try {
                 if (is_null($typeid)) {
                     $toolproxyid = $this->get_service()->get_tool_proxy()->id;
-                    $baseurl = "{$endpoint}/{$item->id}/lineitem";
+                    $baseurl = null;
                 } else {
                     $toolproxyid = null;
-                    $baseurl = "{$endpoint}/{$item->id}/lineitem?type_id=" . $typeid;
+                    $baseurl = lti_get_type_type_config($typeid)->lti_toolurl;
                 }
                 $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array(
                         'id' => $gbs->id,
+                        'itemnumber' => $gbs->itemnumber,
+                        'courseid' => $gbs->courseid,
                         'toolproxyid' => $toolproxyid,
                         'typeid' => $typeid,
                         'baseurl' => $baseurl,
@@ -267,10 +269,10 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         }
 
         if (is_null($typeid)) {
-            $id = "{$endpoint}/{$item->id}/lineitem";
+            $id = "{$endpoint}";
             $json->id = $id;
         } else {
-            $id = "{$endpoint}/{$item->id}/lineitem?type_id={$typeid}";
+            $id = "{$endpoint}?type_id={$typeid}";
             $json->id = $id;
         }
         return json_encode($json, JSON_UNESCAPED_SLASHES);
@@ -309,7 +311,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         $tool = lti_get_type_type_config($typeid);
         if ($tool->ltiservice_gradesynchronization == '1') {
             return array('LineItem.item:get');
-        } else if ($tool->ltiservice_gradesynchronization== '2') {
+        } else if ($tool->ltiservice_gradesynchronization == '2') {
             return array('LineItem.item:get', 'LineItem.item:put', 'LineItem.item:delete');
         } else {
             return array();

@@ -38,43 +38,4 @@ defined('MOODLE_INTERNAL') || die;
  */
 function xmldb_ltiservice_gradebookservices_install() {
     global $DB;
-    try {
-        if ($DB->record_exists_select('ltiservice_gradebookservices', 'id > 9999')) {
-            $success = true;
-        } else {
-            $dbfamily = $DB->get_dbfamily();
-            if ($dbfamily === 'postgres') {
-                $sql = 'ALTER SEQUENCE {ltiservice_gradebookservices_id_seq} RESTART WITH 10000';
-                $DB->execute($sql);
-            } else if ($dbfamily === 'oracle') {
-                $prefix = strtoupper($DB->get_prefix());
-                $sql = "SELECT sequence_name
-                FROM user_sequences
-                WHERE sequence_name LIKE ?";
-                $rs = $DB->get_recordset_sql($sql, array($prefix.'LTISG%'));
-                foreach ($rs as $seq) {
-                    $sequencename = $seq->sequence_name;
-                }
-                $rs->close();
-                $sql2 = 'ALTER SEQUENCE '.$sequencename.' INCREMENT BY 10000';
-                $DB->execute($sql2);
-                $sql3 = 'SELECT '.$sequencename.'.NEXTVAL FROM dual';
-                $DB->execute($sql3);
-                $sql4 = 'ALTER SEQUENCE '.$sequencename.' INCREMENT BY 1';
-                $DB->execute($sql4);
-            } else if ($dbfamily === 'mssql') {
-                $sql = 'SET IDENTITY_INSERT {ltiservice_gradebookservices} ON
-                         INSERT {ltiservice_gradebookservices}(id, toolproxyid) VALUES (10000, 1)
-                         DELETE FROM {ltiservice_gradebookservices} WHERE id=10000
-                         SET IDENTITY_INSERT {ltiservice_gradebookservices} OFF';
-                $DB->execute($sql);
-            } else {
-                $params = array('id' => 10000, 'toolproxyid' => 1);
-                $DB->insert_record_raw('ltiservice_gradebookservices', $params, false, false, true);
-                $DB->delete_records('ltiservice_gradebookservices', $params);
-            }
-        }
-    } catch (\Exception $e) {
-        $success = false;
-    }
 }
