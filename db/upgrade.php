@@ -56,9 +56,9 @@
  */
 function xmldb_ltiservice_gradebookservices_upgrade($oldversion) {
 
-    // subplugin upgrade is not supported (3.5dev):
+    // Subplugin upgrade is not supported (3.5dev):
     // upgrade_mod_savepoint(true, 2017060100, 'ltiservice_gradebookservices');
-    // fails with Error code: modulenotexist
+    // Fails with Error code: modulenotexist.
 
     return true;
 }

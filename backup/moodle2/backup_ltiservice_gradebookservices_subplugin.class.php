@@ -130,18 +130,18 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         // Define sources.
         $thisactivitylineitemslti2sql = "SELECT g.*,l.toolproxyid,l.baseurl,l.tag,t.vendorcode,t.guid
                            FROM {grade_items} g
-                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
+                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.itemnumber AND g.courseid = l.courseid)
                            JOIN {lti_tool_proxies} t ON (t.id = l.toolproxyid)
-                           WHERE courseid = ?
+                           WHERE g.courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
-                           AND g.iteminstance = ? AND g.itemnumber>10000 AND l.typeid is null";
+                           AND g.iteminstance = ? AND l.typeid is null";
         $thisactivitylineitemsltiadsql = "SELECT g.*,l.typeid,l.baseurl,l.tag
                            FROM {grade_items} g
-                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
+                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.itemnumber AND g.courseid = l.courseid)
                            JOIN {lti_types} t ON (t.id = l.typeid)
-                           WHERE courseid = ?
+                           WHERE g.courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
-                           AND g.iteminstance = ? AND g.itemnumber>10000 AND l.toolproxyid is null";
+                           AND g.iteminstance = ? AND l.toolproxyid is null";
 
         $typeid = $DB->get_field('lti', 'typeid' , ['id' => $this->task->get_activityid()]);
 
@@ -185,20 +185,20 @@ class backup_ltiservice_gradebookservices_subplugin extends backup_subplugin {
         }
         $nonactivitylineitemslti2sql = "SELECT g.*,l.toolproxyid,l.baseurl,l.tag,t.vendorcode,t.guid
                            FROM {grade_items} g
-                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
+                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.itemnumber AND g.courseid = l.courseid)
                            JOIN {lti_tool_proxies} t ON (t.id = l.toolproxyid)
-                           WHERE courseid = ?
+                           WHERE g.courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
                            AND g.iteminstance is null
-                           AND g.itemnumber>10000 AND l.typeid is null AND l.toolproxyid = ?";
+                           AND l.typeid is null AND l.toolproxyid = ?";
         $nonactivitylineitemsltiadsql = "SELECT g.*,l.typeid,l.baseurl,l.tag
                            FROM {grade_items} g
-                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.id)
+                           JOIN {ltiservice_gradebookservices} l ON (g.itemnumber = l.itemnumber AND g.courseid = l.courseid)
                            JOIN {lti_types} t ON (t.id = l.typeid)
-                           WHERE courseid = ?
+                           WHERE g.courseid = ?
                            AND g.itemtype='mod' AND g.itemmodule = 'lti'
                            AND g.iteminstance is null
-                           AND g.itemnumber>10000 AND l.typeid = ? AND l.baseurl = ? AND l.toolproxyid is null";
+                           AND l.typeid = ? AND l.baseurl = ? AND l.toolproxyid is null";
 
         $thisactivitylineitemsparams = ['courseid' => backup::VAR_COURSEID, 'iteminstance' => backup::VAR_ACTIVITYID];
         $thisactivitylineitemlti2->set_source_sql($thisactivitylineitemslti2sql, $thisactivitylineitemsparams);

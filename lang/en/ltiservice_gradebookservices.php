@@ -36,6 +36,6 @@ $string['grade_synchronization_help'] = 'Use the IMS LTI Assignment and Grade Se
 * **Use this service for grade sync only** - The service will populate the grades in an already existing gradebook column, but it will not be able to create new columns
 * **Use this service for grade sync and column management** -  The service will be able to create and update gradebook columns and manage the grades. ';
 $string['nevergs'] = 'Do not use this service';
-$string['partialgs'] = 'Use this service for grade sync only' ;
+$string['partialgs'] = 'Use this service for grade sync only';
 $string['alwaysgs'] = 'Use this service for grade sync and column management ';
 

@@ -157,15 +157,16 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $launchparameters = array();
         $tool = lti_get_type_type_config($typeid);
-        // only inject parameters if the service is enabled for this tool
+        // Only inject parameters if the service is enabled for this tool.
         if ($tool->ltiservice_gradesynchronization == '1' || $tool->ltiservice_gradesynchronization == '2') {
-            // check for used in context is only needed because there is no explicit site tool - course relation
+            // Check for used in context is only needed because there is no explicit site tool - course relation.
             if ($this->is_allowed_in_context($typeid, $courseid)) {
                 $endpoint = $this->get_service_path() . "/{$courseid}/lineitems";
                 if (is_null($modlti)) {
                     $id = null;
                 } else {
-                    $conditions = array('courseid' => $courseid, 'itemtype' => 'mod', 'itemmodule' => 'lti', 'iteminstance' => $modlti);
+                    $conditions = array('courseid' => $courseid, 'itemtype' => 'mod',
+                            'itemmodule' => 'lti', 'iteminstance' => $modlti);
                     $numberoflineitems = $DB->count_records('grade_items', $conditions);
                     if ($numberoflineitems == 1) {
                         $id = $DB->get_field('grade_items', 'id', $conditions);
@@ -215,7 +216,7 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
 
         $sql = "SELECT i.*, s.tag
         FROM {grade_items} i
-        LEFT JOIN {ltiservice_gradebookservices} s ON i.itemnumber = s.id
+        LEFT JOIN {ltiservice_gradebookservices} s ON (i.itemnumber = s.itemnumber AND i.courseid = s.courseid)
         WHERE (i.courseid = :courseid)
         AND (i.itemtype = :itemtype)
         AND (i.itemmodule = :itemmodule)
@@ -462,7 +463,11 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
             if (!empty($grade->feedback)) {
                 $result->comment = $grade->feedback;
             }
-            $result->scoreOf = $endpoint;
+            if (is_null($typeid)) {
+                $result->scoreOf = $endpoint;
+            } else {
+                $result->scoreOf = "{$endpoint}?type_id={$typeid}";
+            }
             $result->timestamp = date('c', $grade->timemodified);
         }
         $json = json_encode($result, JSON_UNESCAPED_SLASHES);
@@ -544,15 +549,15 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
     /**
      * Sometimes, if a gradebook entry is deleted and it was a lineitem
      * the row in the table ltiservice_gradebookservices can become an orphan
-     * This method will clean these orphans. It will happens based in a random number
+     * This method will clean these orphans. It will happens based on a task
      * because it is not urgent and we don't want to slow the service
      *
      */
     public static function delete_orphans_ltiservice_gradebookservices_rows() {
         global $DB;
-        $sql = 'DELETE FROM {ltiservice_gradebookservices} where id not in
-             (SELECT DISTINCT itemnumber FROM {grade_items} gi where gi.itemtype="mod"
-             AND gi.itemmodule="lti" AND ((NOT gi.itemnumber=0) AND (NOT gi.itemnumber is null)))';
+        $sql = 'DELETE FROM {ltiservice_gradebookservices} where gradeitem not in
+             (SELECT DISTINCT id FROM {grade_items} gi where gi.itemtype="mod"
+             AND gi.itemmodule="lti")';
         try {
             $deleted = $DB->execute($sql);
         } catch (\Exception $e) {
@@ -601,31 +606,16 @@ class gradebookservices extends \mod_lti\local\ltiservice\service_base {
         }
         $gradeitem = $DB->get_record('grade_items', array('id' => $lineitemid));
         if ($gradeitem) {
-            if ($gradeitem->iteminstance) {
-                if (isset($gradeitem->itemnumber)) {
-                    $gbs1 = $DB->get_record('ltiservice_gradebookservices',
-                            array('id' => $gradeitem->itemnumber, 'ltilinkid' => $gradeitem->iteminstance));
-                    if ($gbs1) {
-                        return $gbs1;
-                    } else {
-                        $gbs2 = $DB->get_record('ltiservice_gradebookservices',
-                                array('previousid' => $gradeitem->itemnumber, 'ltilinkid' => $gradeitem->iteminstance));
-                        if ($gbs2) {
-                            return $gbs2;
-                        } else {
-                            return false;
-                        }
-                    }
+            if (isset($gradeitem->itemnumber)) {
+                $gbs = $DB->get_record('ltiservice_gradebookservices',
+                        array('itemnumber' => $gradeitem->itemnumber, 'courseid' => $gradeitem->courseid));
+                if ($gbs) {
+                    return $gbs;
                 } else {
                     return false;
                 }
             } else {
-                $gbs3 = $DB->get_record('ltiservice_gradebookservices', array('id' => $gradeitem->itemnumber));
-                if ($gbs3) {
-                    return $gbs3;
-                } else {
-                    return false;
-                }
+                return false;
             }
         } else {
             return false;
