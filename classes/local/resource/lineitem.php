@@ -94,7 +94,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    $this->get_request($response, $contextid, $item, null);
+                    $this->get_request($response, $contextid, $item);
                     break;
                 case 'PUT':
                     $json = $this->put_request($response->get_request_data(), $item);
@@ -122,11 +122,11 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
      * @param boolean $results   True if results are to be included in the response.
      * @param string  $item       Grade item instance.
      */
-    private function get_request($response, $contextid, $item, $typeid) {
+    private function get_request($response, $contextid, $item) {
 
         $response->set_content_type($this->formats[0]);
         $json = gradebookservices::item_to_json($item, substr(parent::get_endpoint(),
-                0, strrpos(parent::get_endpoint(), "/", -10)), $typeid);
+                0, strrpos(parent::get_endpoint(), "/", -10)));
         $response->set_body($json);
 
     }
@@ -174,15 +174,15 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             }
             $gbs->tag = $tag;
         }
-        if (isset($json->ltiLinkId)) {
-            if (is_numeric($json->ltiLinkId)) {
-                if (intval($item->iteminstance) !== intval($json->ltiLinkId)) {
+        if (isset($json->resourceLinkId)) {
+            if (is_numeric($json->resourceLinkId)) {
+                if (intval($item->iteminstance) !== intval($json->resourceLinkId)) {
                     $updategradeitem = true;
                     if ($gbs) {
                         $upgradegradebookservices = true;
                     }
                 }
-                $item->iteminstance = intval($json->ltiLinkId);
+                $item->iteminstance = intval($json->resourceLinkId);
             } else {
                 throw new \Exception(null, 400);
             }
@@ -210,7 +210,7 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
             try {
                 $gradebookservicesid = $DB->update_record('ltiservice_gradebookservices', array('id' => $gbs->id,
                      'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                     'ltilinkid' => $item->iteminstance,
+                     'resourcelinkid' => $item->iteminstance,
                      'tag' => $gbs->tag
                 ));
             } catch (\Exception $e) {
@@ -221,6 +221,8 @@ class lineitem extends \mod_lti\local\ltiservice\resource_base {
         $endpoint = $lineitem->get_endpoint();
         $id = "{$endpoint}/{$item->id}/lineitem";
         $json->id = $id;
+        $json->results = "{$endpoint}/{$item->id}/results";
+        $json->scores = "{$endpoint}/{$item->id}/scores";
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 
     }

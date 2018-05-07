@@ -67,6 +67,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
         global $DB;
 
         $params = $this->parse_template();
+
         $contextid = $params['context_id'];
         $isget = $response->get_request_method() === 'GET';
         if ($isget) {
@@ -92,8 +93,7 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
             switch ($response->get_request_method()) {
                 case 'GET':
                     $resourceid = optional_param('resource_id', null, PARAM_TEXT);
-                    $ltilinkid = optional_param('lti_link_id', null, PARAM_TEXT);
-                    $tag = optional_param('tag', null, PARAM_TEXT);
+                    $resourcelinkid = optional_param('resource_link_id', null, PARAM_TEXT);
                     if (isset($_GET['limit'])) {
                         gradebookservices::validate_paging_query_parameters($_GET['limit']);
                     }
@@ -102,12 +102,13 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
                         gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
                     }
                     $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $itemsandcount = $this->get_service()->get_lineitems($contextid, $resourceid, $ltilinkid, $tag, $limitfrom,
-                            $limitnum, null);
-                    $items = $itemsandcount[1];
-                    $totalcount = $itemsandcount[0];
-                    $json = $this->get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom,
-                            $limitnum, $totalcount, null, $response);
+
+                    $items = $this->get_service()->get_lineitems($contextid, $resourceid, $resourcelinkid, $limitfrom,
+                        $limitnum);
+
+                    $json = $this->get_request_json($contextid, $items, $resourceid, $resourcelinkid, $limitfrom,
+                        $limitnum);
+
                     $response->set_content_type($this->formats[0]);
                     break;
                 case 'POST':
@@ -132,86 +133,23 @@ class lineitems extends \mod_lti\local\ltiservice\resource_base {
      * @param string $contextid      Course ID
      * @param array  $items          Array of lineitems
      * @param string $resourceid     Resource identifier used for filtering, may be null
-     * @param string $ltilinkid      Resource Link identifier used for filtering, may be null
-     * @param string $tag            Tag identifier used for filtering, may be null
+     * @param string $resourcelinkid Resource Link identifier used for filtering, may be null
      * @param int    $limitfrom      Offset of the first line item to return
      * @param int    $limitnum       Maximum number of line items to return, ignored if zero or less
-     * @param int    $totalcount     Number of total lineitems before filtering for paging
-     * @param int    $typeid         Maximum number of line items to return, ignored if zero or less
+     *
      * return string
      */
-    private function get_request_json($contextid, $items, $resourceid, $ltilinkid, $tag, $limitfrom, $limitnum, $totalcount, $typeid, $response) {
+    private function get_request_json($contextid, $items, $resourceid, $resourcelinkid, $limitfrom, $limitnum) {
 
         if (isset($limitnum) && $limitnum > 0) {
-            if ($limitfrom >= $totalcount || $limitfrom < 0) {
-                $outofrange = true;
-            } else {
-                $outofrange = false;
-            }
-            $limitprev = $limitfrom - $limitnum >= 0 ? $limitfrom - $limitnum : 0;
-            $limitcurrent = $limitfrom;
-            $limitlast = $totalcount - $limitnum + 1 >= 0 ? $totalcount - $limitnum + 1 : 0;
-            $limitfrom += $limitnum;
-            if (is_null($typeid)) {
-                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
-                    $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
-                } else {
-                    $nextpage = null;
-                }
-                $firstpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=0";
-                $canonicalpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitcurrent;
-                $lastpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitlast;
-                if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitprev;
-                } else {
-                    $prevpage = null;
-                }
-            } else {
-                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
-                    $nextpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitfrom;
-                } else {
-                    $nextpage = null;
-                }
-                $firstpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=0";
-                $canonicalpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitcurrent;
-                $lastpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitlast;
-                if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage = $this->get_endpoint() . "?type_id=" . $typeid . "&limit=" . $limitnum . "&from=" . $limitprev;
-                } else {
-                    $prevpage = null;
-                }
-            }
-            if (isset($resourceid)) {
-                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
+            if (count($items) == $limitnum) {
+                $limitfrom += $limitnum;
+                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
+                if (isset($resourceid)) {
                     $nextpage .= "&resource_id={$resourceid}";
                 }
-                $firstpage .= "&resource_id={$resourceid}";
-                $canonicalpage .= "&resource_id={$resourceid}";
-                $lastpage .= "&resource_id={$resourceid}";
-                if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage .= "&resource_id={$resourceid}";
-                }
-            }
-            if (isset($ltilinkid)) {
-                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
-                    $nextpage .= "&lti_link_id={$ltilinkid}";
-                }
-                $firstpage .= "&lti_link_id={$ltilinkid}";
-                $canonicalpage .= "&lti_link_id={$ltilinkid}";
-                $lastpage .= "&lti_link_id={$ltilinkid}";
-                if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage .= "&lti_link_id={$ltilinkid}";
-                }
-            }
-            if (isset($tag)) {
-                if (($limitfrom <= $totalcount - 1) && (!$outofrange)) {
-                    $nextpage .= "&tag={$tag}";
-                }
-                $firstpage .= "&tag={$tag}";
-                $canonicalpage .= "&tag={$tag}";
-                $lastpage .= "&tag={v}";
-                if (($limitcurrent > 0) && (!$outofrange)) {
-                    $prevpage .= "&tag={$tag}";
+                if (isset($resourcelinkid)) {
+                    $nextpage .= "&resource_link_id={$resourcelinkid}";
                 }
             }
         }
@@ -223,27 +161,24 @@ EOD;
         $endpoint = parent::get_endpoint();
         $sep = '        ';
         foreach ($items as $item) {
-            $json .= $sep . gradebookservices::item_to_json($item, $endpoint, $typeid);
+            $json .= $sep . gradebookservices::item_to_json($item, $endpoint);
             $sep = ",\n        ";
         }
         $json .= <<< EOD
 
   ]
+EOD;
+        if (isset($nextpage) && ($nextpage)) {
+            $json .= ",\n";
+            $json .= <<< EOD
+  "nextPage" : "{$nextpage}"
+
+EOD;
+        }
+            $json .= <<< EOD
 }
 EOD;
-        if (isset($canonicalpage) && ($canonicalpage)) {
-            $links = 'links: <' . $firstpage . '>; rel=“first”';
-            if (!(is_null($prevpage))) {
-                $links .= ', <' . $prevpage . '>; rel=“prev”';
-            }
-            $links .= ', <' . $canonicalpage. '>; rel=“canonical”';
-            if (!(is_null($nextpage))) {
-                $links .= ', <' . $nextpage . '>; rel=“next”';
-            }
-            $links .= ', <' . $lastpage . '>; rel=“last”';
-            // Disabled until add_additional_header is included in the core code.
-            // $response->add_additional_header($links);
-        }
+
         return $json;
     }
 
@@ -271,9 +206,9 @@ EOD;
         }
         require_once($CFG->libdir.'/gradelib.php');
         $resourceid = (isset($json->resourceId)) ? $json->resourceId : '';
-        $ltilinkid = (isset($json->ltiLinkId)) ? $json->ltiLinkId : null;
-        if ($ltilinkid != null) {
-            if (!gradebookservices::check_lti_id($ltilinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
+        $resourcelinkid = (isset($json->resourceLinkId)) ? $json->resourceLinkId : null;
+        if ($resourcelinkid != null) {
+            if (!gradebookservices::check_lti_id($resourcelinkid, $contextid, $this->get_service()->get_tool_proxy()->id)) {
                 throw new \Exception(null, 403);
             }
         }
@@ -281,8 +216,8 @@ EOD;
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                 'toolproxyid' => $this->get_service()->get_tool_proxy()->id,
-                'ltilinkid' => $ltilinkid,
-                'tag' => $tag
+                    'resourcelinkid' => $resourcelinkid,
+                    'tag' => $tag
             ));
         } catch (\Exception $e) {
             throw new \Exception(null, 500);
@@ -299,11 +234,13 @@ EOD;
         $item->itemmodule = 'lti';
         $item->itemnumber = $gradebookservicesid;
         $item->idnumber = $resourceid;
-        if (isset($json->ltiLinkId) && is_numeric($json->ltiLinkId)) {
-            $item->iteminstance = $json->ltiLinkId;
+        if (isset($json->resourceLinkId) && is_numeric($json->resourceLinkId)) {
+            $item->iteminstance = $json->resourceLinkId;
         }
         $id = $item->insert('mod/ltiservice_gradebookservices');
         $json->id = parent::get_endpoint() . "/{$id}/lineitem";
+        $json->results = parent::get_endpoint() . "/{$id}/results";
+        $json->scores = parent::get_endpoint() . "/{$id}/scores";
 
         return json_encode($json, JSON_UNESCAPED_SLASHES);
 

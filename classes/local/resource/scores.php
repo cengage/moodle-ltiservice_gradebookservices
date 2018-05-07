@@ -150,11 +150,15 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
         if (!isset($result->scoreMaximum)) {
             $result->scoreMaximum = 1;
         }
-        $response->set_code(200);
+        $newgrade = true;
+        $response->set_code(201);
         $grade = \grade_grade::fetch(array('itemid' => $item->id, 'userid' => $result->userId));
         if ($grade &&  !empty($grade->timemodified)) {
-            if ($grade->timemodified >= strtotime($result->timestamp)) {
-                throw new \Exception(null, 403);
+            if ($grade->timemodified < strtotime($result->timestamp)) {
+                $newgrade = false;
+                $response->set_code(200);
+            } else {
+                throw new \Exception(null, 400);
             }
         }
         if (isset($result->scoreGiven)) {
@@ -164,8 +168,15 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
                 $this->reset_result($item, $result->userId);
             }
         } else {
-            $this->reset_result($item, $result->userId);
+            $response->set_code(200);
         }
+        $lineitem = new lineitem($this->get_service());
+        $endpoint = $lineitem->get_endpoint();
+        $id = "{$endpoint}/scores/{$result->userId}";
+        $result->id = $id;
+        $result->scoreOf = $endpoint;
+        return json_encode($result, JSON_UNESCAPED_SLASHES);
+
     }
 
     /**

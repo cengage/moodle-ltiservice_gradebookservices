@@ -76,7 +76,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         try {
             $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                     'toolproxyid' => $newtoolproxyid,
-                    'ltilinkid' => $this->get_new_parentid('lti'),
+                    'resourcelinkid' => $this->get_new_parentid('lti'),
                     'tag' => $data->tag,
                     'previousid' => $data->itemnumber
             ));
@@ -98,7 +98,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
         $courseid = $this->task->get_courseid();
         try {
             $sql = 'SELECT * FROM {grade_items} gi
-                    INNER JOIN {ltiservice_gradebookservices} gbs ON gbs.id = gi.itemnumber
+                    INNER JOIN {ltiservice_gradebookservices} gbs where gbs.id = gi.itemnumber
                     AND courseid =? and gbs.previousid=?';
             $conditions = array('courseid' => $courseid, 'previousid' => $data->itemnumber);
             // We will check if the record has been restored by a previous activity
@@ -108,7 +108,7 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
                 // Restore the lineitem.
                 $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
                         'toolproxyid' => $newtoolproxyid,
-                        'ltilinkid' => null,
+                        'resourcelinkid' => null,
                         'tag' => $data->tag,
                         'previousid' => $data->itemnumber
                 ));

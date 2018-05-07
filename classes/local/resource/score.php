@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * This file contains a class definition for the LISResults container resource
+ * This file contains a class definition for the Score resource
  *
  * @package    ltiservice_gradebookservices
  * @copyright  2017 Cengage Learning http://www.cengage.com
@@ -31,14 +31,14 @@ use ltiservice_gradebookservices\local\service\gradebookservices;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * A resource implementing LISResults container.
+ * A resource implementing Score.
  *
  * @package    ltiservice_gradebookservices
  * @since      Moodle 3.0
  * @copyright  2017 Cengage Learning http://www.cengage.com
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class results extends \mod_lti\local\ltiservice\resource_base {
+class score extends \mod_lti\local\ltiservice\resource_base {
 
     /**
      * Class constructor.
@@ -48,11 +48,13 @@ class results extends \mod_lti\local\ltiservice\resource_base {
     public function __construct($service) {
 
         parent::__construct($service);
-        $this->id = 'Result.collection';
-        $this->template = '/{context_id}/lineitems/{item_id}/results';
-        $this->variables[] = 'Results.url';
-        $this->formats[] = 'application/vnd.ims.lis.v1.resultcontainer+json';
-        $this->methods[] = 'GET';
+        $this->id = 'Score.item';
+        $this->template = '/{context_id}/lineitems/{item_id}/scores/{result_id}/score';
+        $this->variables[] = 'Score.url';
+        $this->formats[] = 'application/vnd.ims.lis.v1.score+json';
+        $this->methods[] = 'PUT';
+        $this->methods[] = 'DELETE';
+
     }
 
     /**
@@ -66,6 +68,10 @@ class results extends \mod_lti\local\ltiservice\resource_base {
         $params = $this->parse_template();
         $contextid = $params['context_id'];
         $itemid = $params['item_id'];
+        $resultid = $params['result_id'];
+
+        // GET is disabled by the moment, but we have the code ready
+        // for a future implementation.
 
         $isget = $response->get_request_method() === 'GET';
         if ($isget) {
@@ -73,7 +79,6 @@ class results extends \mod_lti\local\ltiservice\resource_base {
         } else {
             $contenttype = $response->get_content_type();
         }
-        $container = empty($contenttype) || ($contenttype === $this->formats[0]);
 
         try {
             if (!$this->check_tool_proxy(null, $response->get_request_data())) {
@@ -98,22 +103,20 @@ class results extends \mod_lti\local\ltiservice\resource_base {
             require_once($CFG->libdir.'/gradelib.php');
             switch ($response->get_request_method()) {
                 case 'GET':
-                    if (isset($_GET['limit'])) {
-                        gradebookservices::validate_paging_query_parameters($_GET['limit']);
-                    }
-                    $limitnum = optional_param('limit', 0, PARAM_INT);
-                    if (isset($_GET['from'])) {
-                        gradebookservices::validate_paging_query_parameters($limitnum, $_GET['from']);
-                    }
-                    $limitfrom = optional_param('from', 0, PARAM_INT);
-                    $json = $this->get_request_json($item->id, $limitfrom, $limitnum);
-                    $response->set_content_type($this->formats[0]);
+                    $response->set_code(405);
+                    break;
+                case 'PUT':
+                    $json = $this->put_request($response->get_request_data(), $item, $resultid, $contextid);
                     $response->set_body($json);
+                    $response->set_code(200);
+                    break;
+                case 'DELETE':
+                    $this->delete_request($item, $resultid, $contextid);
+                    $response->set_code(204);
                     break;
                 default:  // Should not be possible.
                     throw new \Exception(null, 405);
             }
-            $response->set_body($json);
 
         } catch (\Exception $e) {
             $response->set_code($e->getCode());
@@ -121,75 +124,100 @@ class results extends \mod_lti\local\ltiservice\resource_base {
 
     }
 
+    // This code is not used because the GET is disabled, but it
+    // stays here to make easier a future implementation.
+
     /**
      * Generate the JSON for a GET request.
      *
-     * @param int    $itemid     Grade item instance ID
-     * @param string $limitfrom  Offset for the first result to include in this paged set
-     * @param string $limitnum   Maximum number of results to include in the response, ignored if zero
+     * @param object $grade       Grade instance
      *
      * return string
      */
-    private function get_request_json($itemid, $limitfrom, $limitnum) {
+    private function get_request_json($grade) {
 
-        $grades = \grade_grade::fetch_all(array('itemid' => $itemid));
-
-        if ($grades && isset($limitnum) && $limitnum > 0) {
-            // Since we only display grades that have been modified, we need to filter first in order to support
-            // paging.
-            $resultgrades = array_filter($grades, function ($grade) {
-                return !empty($grade->timemodified);
-            });
-            // We slice to the requested item offset to insure proper item is always first, and we always return
-            // first pageset of any remaining items.
-            $grades = array_slice($resultgrades, $limitfrom);
-            if (count($grades) > 0) {
-                $pagedgrades = array_chunk($grades, $limitnum);
-                $pageset = 0;
-                $grades = $pagedgrades[$pageset];
-            }
-
-            if (count($grades) == $limitnum) {
-                // To be consistent with paging behavior elsewhere which uses Moodle DB limitfrom and limitnum where
-                // an empty page collection may be returned for the final offset when the last page set contains the
-                // full limit of items, do the same here.
-                $limitfrom += $limitnum;
-                $nextpage = $this->get_endpoint() . "?limit=" . $limitnum . "&from=" . $limitfrom;
-            }
+        if (empty($grade->timemodified)) {
+            throw new \Exception(null, 400);
         }
-
-        $json = <<< EOD
-{
-  "results" : [
-EOD;
         $lineitem = new lineitem($this->get_service());
-        $endpoint = $lineitem->get_endpoint();
-        $sep = "\n        ";
-        if ($grades) {
-            foreach ($grades as $grade) {
-                if (!empty($grade->timemodified)) {
-                    $json .= $sep . gradebookservices::result_to_json($grade, $endpoint);
-                    $sep = ",\n        ";
-                }
-            }
-        }
-        $json .= <<< EOD
+        $json = gradebookservices::score_to_json($grade, $lineitem->get_endpoint());
 
-  ]
-EOD;
-        if (isset($nextpage) && ($nextpage)) {
-            $json .= ",\n";
-            $json .= <<< EOD
- "nextPage" : "{$nextpage}"
-EOD;
-        }
-        $json .= <<< EOD
-
-}
-EOD;
         return $json;
+
     }
 
+
+    /**
+     * Process a PUT request.
+     *
+     * @param string $body        PUT body
+     * @param object $item        Lineitem instance
+     * @param string $userid      User ID
+     */
+    private function put_request($body, $item, $userid, $contextid) {
+
+        $score = json_decode($body);
+        if (empty($score) ||
+                (isset($score->userId) && ($score->userId !== $userid)) ||
+                !isset($score->gradingProgress) ||
+                !isset($score->activityProgress) ||
+                !isset($score->timestamp) ||
+                isset($score->timestamp) && !gradebookservices::validate_iso8601_date($score->timestamp) ||
+                (isset($score->scoreGiven) && !is_numeric($score->scoreGiven)) ||
+                (isset($score->scoreMaximum) && !is_numeric($score->scoreMaximum)) ||
+                (!gradebookservices::is_user_gradable_in_course($contextid, $userid))
+                ) {
+            throw new \Exception(null, 400);
+        }
+        $grade = \grade_grade::fetch(array('itemid' => $item->id, 'userid' => $userid));
+        if ($grade && (!empty($grade->timemodified)) && ($grade->timemodified > strtotime($score->timestamp))) {
+            throw new \Exception(null, 400);
+        }
+        $score->timemodified = strtotime($score->timestamp);
+        if (!isset($score->scoreMaximum)) {
+            $score->scoreMaximum = 1;
+        }
+        if (isset($score->scoreGiven)) {
+            if ($score->gradingProgress == "FullyGraded") {
+                gradebookservices::set_grade_item($item, $score, $userid);
+            } else {
+                $this->delete_request($item, $userid, $contextid);
+            }
+        }
+        $lineitem = new lineitem($this->get_service());
+        $endpoint = $lineitem->get_endpoint();
+        $endpoint = substr($endpoint, 0, strripos($endpoint, '/'));
+        $id = "{$endpoint}/scores/$userid/score";
+        $score->id = $id;
+        $score->scoreOf = $endpoint;
+        return json_encode($score, JSON_UNESCAPED_SLASHES);
+
+    }
+
+
+    /**
+     * Process a DELETE request.
+     *
+     * @param object $item       Lineitem instance
+     * @param string  $userid    User ID
+     */
+    private function delete_request($item, $userid, $contextid) {
+
+        if (!gradebookservices::is_user_gradable_in_course($contextid, $userid)) {
+            throw new \Exception(null, 404);
+        }
+        $grade = new \stdClass();
+        $grade->userid = $userid;
+        $grade->rawgrade = null;
+        $grade->feedback = null;
+        $grade->feedbackformat = FORMAT_MOODLE;
+        $status = grade_update('mod/ltiservice_gradebookservices', $item->courseid, $item->itemtype, $item->itemmodule,
+                               $item->iteminstance, $item->itemnumber, $grade);
+        if ($status !== GRADE_UPDATE_OK) {
+            throw new \Exception(null, 500);
+        }
+
+    }
 
     /**
      * Parse a value for custom parameter substitution variables.
@@ -199,9 +227,9 @@ EOD;
      * @return string
      */
     public function parse_value($value) {
-        global $COURSE, $CFG;
+        global $COURSE, $USER, $CFG;
 
-        if (strpos($value, '$Results.url') !== false) {
+        if (strpos($value, '$Score.url') !== false) {
             require_once($CFG->libdir . '/gradelib.php');
 
             $resolved = '';
@@ -213,10 +241,11 @@ EOD;
                     $item = grade_get_grades($COURSE->id, 'mod', 'lti', $id);
                     if ($item && $item->items) {
                         $this->params['item_id'] = $item->items[0]->id;
+                        $this->params['result_id'] = $USER->id;
                         $resolved = parent::get_endpoint();
                     }
                 }
-            $value = str_replace('$Results.url', $resolved, $value);
+            $value = str_replace('$Score.url', $resolved, $value);
         }
 
         return $value;
