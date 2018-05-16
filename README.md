@@ -34,6 +34,9 @@ After 3.5 code has been deployed:
 
 ## A note on backup
 
+Due to the different data structure, the moodle 3.5 version of the code of this plugin
+is not able to restore the grade items created using this plugin.
+
 ## Install
 
 To install this plugin in Moodle:
