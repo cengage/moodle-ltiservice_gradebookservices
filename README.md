@@ -32,6 +32,8 @@ After 3.5 code has been deployed:
 1. `cd mod/lti/service/gradebookservices/db; php post_35_upgrade_cli.php`
 1. Done! You should now be able to carrying on use your LTI 2.0 deployment
 
+## A note on backup
+
 ## Install
 
 To install this plugin in Moodle:
