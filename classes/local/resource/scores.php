@@ -49,7 +49,7 @@ class scores extends \mod_lti\local\ltiservice\resource_base {
 
         parent::__construct($service);
         $this->id = 'Score.collection';
-        $this->template = '/{context_id}/lineitems/{item_id}/scores';
+        $this->template = '/{context_id}/lineitems/{item_id}/lineitem/scores';
         $this->variables[] = 'Scores.url';
         $this->formats[] = 'application/vnd.ims.lis.v1.scorecontainer+json';
         $this->formats[] = 'application/vnd.ims.lis.v1.score+json';

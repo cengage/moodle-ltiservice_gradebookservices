@@ -24,10 +24,18 @@ to manually run an update script to fix the table this plugin is using to the de
 If you install this plugin, you will need to manually update the ltiservice_gradebookservices table.
 We provide a script that will update the table and migrate the existing data.
 
-To run it:
+Prior to upgrading to moodle:
+1. Remove the plugin code (now included with moodle): mod/lti/service/gradebookservices
+
+After 3.5 code has been deployed:
 1. Copy [post_35_upgrade_cli.php](db/post_35_upgrade_cli.php) to moodle_root/mod/lti/service/gradebookservices/db
 1. `cd mod/lti/service/gradebookservices/db; php post_35_upgrade_cli.php`
 1. Done! You should now be able to carrying on use your LTI 2.0 deployment
+
+## A note on backup
+
+Due to the different data structure, the moodle 3.5 version of the code of this plugin
+is not able to restore the grade items created using this plugin.
 
 ## Install
 
