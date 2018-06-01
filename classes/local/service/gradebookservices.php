@@ -307,6 +307,13 @@ class gradebookservices extends service_base {
         return $lineitem;
     }
 
+    /**
+     * Due to the lack of support for post restore hook for subplugins,
+     * this checks if the course is a post restored course and finalize
+     * the remapping if needed. This has been addressed in moodle 3.5.
+     *
+     * @param string $courseid the course id.
+     */
     public static function complete_remapping($courseid) {
         global $DB;
         $params = array('courseid' => $courseid);
