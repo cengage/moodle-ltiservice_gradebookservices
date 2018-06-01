@@ -19,11 +19,15 @@
  *
  * @package    ltiservice_gradebookservices
  * @copyright  2017 Cengage Learning http://www.cengage.com
- * @author     Dirk Singels, Diego del Blanco
+ * @author     Dirk Singels, Diego del Blanco, Claude Vervoort
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->dirroot.'/mod/lti/locallib.php');
+
 /**
  * Restore subplugin class.
  *
@@ -36,139 +40,83 @@ defined('MOODLE_INTERNAL') || die();
  * @author     Dirk Singels, Diego del Blanco, Claude Vervoort
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
+class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin {
 
+    /**
+     * Returns the subplugin structure to attach to the XML element.
+     *
+     * @return restore_path_element[] array of elements to be processed on restore.
+     */
     protected function define_lti_subplugin_structure() {
 
-        $userinfo = $this->get_setting_value('users');
-
         $paths = array();
-        $elename = $this->get_namefor('coupledgradeitem');
-        $elepath = $this->get_pathfor('/thisactivitylineitems/coupled_grade_item');
+        $elename = $this->get_namefor('lineitem');
+        $elepath = $this->get_pathfor('/lineitems/lineitem');
         $paths[] = new restore_path_element($elename, $elepath);
-        $elename = $this->get_namefor('uncoupledgradeitem');
-        $elepath = $this->get_pathfor('/nonactivitylineitems/uncoupled_grade_item');
-        $paths[] = new restore_path_element($elename, $elepath);
-        if ($userinfo) {
-            $elename = $this->get_namefor('gradegrade');
-            $elepath = $this->get_pathfor('/nonactivitylineitems/uncoupled_grade_item/grade_grades/grade_grade');
-            $paths[] = new restore_path_element($elename, $elepath);
-        }
         return $paths;
     }
 
     /**
-     * Processes one coupled lineitem element
+     * Processes one lineitem
+     *
      * @param mixed $data
      * @return void
      */
-    public function process_ltiservice_gradebookservices_coupledgradeitem($data) {
+    public function process_ltiservice_gradebookservices_lineitem($data) {
         global $DB;
         $data = (object)$data;
         // The coupled lineitems are restored as any other grade item
         // so we will only create the entry in the ltiservice_gradebookservices table.
-        // As we can't update the grade_item because it has not been created yet,
-        // we store the previousid, so we can relate this entry with the new grede item.
-
         // We will try to find a valid toolproxy in the system.
-        $newtoolproxyid = $this->find_proxy_id($data);
-
-        try {
-            $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
-                    'toolproxyid' => $newtoolproxyid,
-                    'resourcelinkid' => $this->get_new_parentid('lti'),
-                    'tag' => $data->tag,
-                    'previousid' => $data->itemnumber
-            ));
-        } catch (\Exception $e) {
-            debugging('Error restoring the lti gradebookservicescreating: ' . $e->getTraceAsString());
-        }
-    }
-
-    /**
-     * Processes one uncoupled lineitem element
-     * @param mixed $data
-     * @return void
-     */
-    public function process_ltiservice_gradebookservices_uncoupledgradeitem($data) {
-        global $DB;
-        $data = (object)$data;
-        // We will try to find a valid toolproxy in the system.
-        $newtoolproxyid = $this->find_proxy_id($data);
-        $courseid = $this->task->get_courseid();
-        try {
-            $sql = 'SELECT * FROM {grade_items} gi
-                    INNER JOIN {ltiservice_gradebookservices} gbs where gbs.id = gi.itemnumber
-                    AND courseid =? and gbs.previousid=?';
-            $conditions = array('courseid' => $courseid, 'previousid' => $data->itemnumber);
-            // We will check if the record has been restored by a previous activity
-            // and if not, we will restore it creating the right grade item and the
-            // right entry in the ltiservice_gradebookservices table.
-            if (!$DB->record_exists_sql($sql, $conditions)) {
-                // Restore the lineitem.
-                $gradebookservicesid = $DB->insert_record('ltiservice_gradebookservices', array(
-                        'toolproxyid' => $newtoolproxyid,
-                        'resourcelinkid' => null,
-                        'tag' => $data->tag,
-                        'previousid' => $data->itemnumber
-                ));
-                $oldid = $data->id;
-                $params = array();
-                $params['itemname'] = $data->itemname;
-                $params['gradetype'] = GRADE_TYPE_VALUE;
-                $params['grademax']  = $data->grademax;
-                $params['grademin']  = $data->grademin;
-                $item = new \grade_item(array('id' => 0, 'courseid' => $courseid));
-                \grade_item::set_properties($item, $params);
-                $item->itemtype = 'mod';
-                $item->itemmodule = 'lti';
-                $item->itemnumber = $gradebookservicesid;
-                $item->idnumber = $data->idnumber;
-                $id = $item->insert('mod/ltiservice_gradebookservices');
-                $this->set_mapping('uncoupled_grade_item', $oldid, $id);
-            }
-        } catch (\Exception $e) {
-            debugging('Error restoring the lti gradebookservicescreating: ' . $e->getTraceAsString());
-        }
-    }
-
-    /**
-     * Processes the grades from the uncoupled lineitem element
-     * @param mixed $data
-     * @return void
-     */
-    public function process_ltiservice_gradebookservices_gradegrade($data) {
-        global $DB;
-        $data = (object)$data;
-        $oldid = $data->id;
-        $olduserid = $data->userid;
-
-        $data->itemid = $this->get_mappingid('uncoupled_grade_item', $data->itemid, null);
-        $data->userid = $this->get_mappingid('user', $data->userid, null);
-
-        if (!empty($data->userid)) {
-            $data->usermodified = $this->get_mappingid('user', $data->usermodified, null);
-            $data->locktime     = $this->apply_date_offset($data->locktime);
-
-            $gradeexists = $DB->record_exists('grade_grades', array('userid' => $data->userid, 'itemid' => $data->itemid));
-            if ($gradeexists) {
-                $message = "User id '{$data->userid}' already has a grade entry for grade item id '{$data->itemid}'";
-                $this->log($message, backup::LOG_DEBUG);
-            } else {
-                $newitemid = $DB->insert_record('grade_grades', $data);
-                $this->set_mapping('grade_grades', $oldid, $newitemid);
+        // If it has been found before... we use it.
+        /* cache parent property to account for missing PHPDoc type specification */
+        /** @var backup_activity_task $activitytask */
+        $activitytask = $this->task;
+        $courseid = $activitytask->get_courseid();
+        if ($data->typeid != null) {
+            if ($ltitypeid = $this->get_mappingid('ltitype', $data->typeid)) {
+                $newtypeid = $ltitypeid;
+            } else { // If not, then we will call our own function to find it.
+                $newtypeid = $this->find_typeid($data, $courseid);
             }
         } else {
-            $message = "Mapped user id not found for user id '{$olduserid}', grade item id '{$data->itemid}'";
-            $this->log($message, backup::LOG_DEBUG);
+            $newtypeid = null;
+        }
+        if ($data->toolproxyid != null) {
+            $ltitoolproxy = $this->get_mappingid('ltitoolproxy', $data->toolproxyid);
+            if ($ltitoolproxy && $ltitoolproxy != 0) {
+                $newtoolproxyid = $ltitoolproxy;
+            } else { // If not, then we will call our own function to find it.
+                $newtoolproxyid = $this->find_proxy_id($data);
+            }
+        } else {
+            $newtoolproxyid = null;
+        }
+        if ($data->ltilinkid != null) {
+            $ltilinkid = $this->get_new_parentid('lti');
+        } else {
+            $ltilinkid = null;
+        }
+        // If this has not been restored before.
+        if ($this->get_mappingid('gbsgradeitemrestored',  $data->id, 0) == 0) {
+            $newgbsid = $DB->insert_record('ltiservice_gradebookservices', (object) array(
+                    'gradeitemid' => $data->gradeitemid,
+                    'courseid' => $courseid,
+                    'toolproxyid' => $newtoolproxyid,
+                    'ltilinkid' => $ltilinkid,
+                    'typeid' => $newtypeid,
+                    'baseurl' => $data->baseurl,
+                    'tag' => $data->tag
+            ));
+            $this->set_mapping('gbsgradeitemoldid', $newgbsid, $data->gradeitemid);
+            $this->set_mapping('gbsgradeitemrestored', $data->id, $data->id);
         }
     }
 
     /**
-     * Find the better toolproxy that matches with the lineitem.
-     * If none is found, then we set it to 0. Note this is
-     * interim solution until MDL-34161 - Fix restore to support course/site tools & submissions
-     * is implemented.
+     * If the toolproxy is not in the mapping (or it is 0)
+     * we try to find the toolproxyid.
+     * If none is found, then we set it to 0.
      *
      * @param mixed $data
      * @return integer $newtoolproxyid
@@ -185,6 +133,77 @@ class restore_ltiservice_gradebookservices_subplugin extends restore_subplugin{
             $newtoolproxyid = $dbtoolproxy;
         }
         return $newtoolproxyid;
+    }
+
+    /**
+     * If the typeid is not in the mapping or it is 0, (it should be most of the times)
+     * we will try to find the better typeid that matches with the lineitem.
+     * If none is found, then we set it to 0.
+     *
+     * @param stdClass $data
+     * @param int $courseid
+     * @return int The item type id
+     */
+    private function find_typeid($data, $courseid) {
+        global $DB;
+        $newtypeid = 0;
+        $oldtypeid = $data->typeid;
+
+        // 1. Find a type with the same id in the same course.
+        $dbtypeidparameter = array('id' => $oldtypeid, 'course' => $courseid, 'baseurl' => $data->baseurl);
+        $dbtype = $DB->get_field_select('lti_types', 'id', "id=:id
+                AND course=:course AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                $dbtypeidparameter);
+        if ($dbtype) {
+            $newtypeid = $dbtype;
+        } else {
+            // 2. Find a site type for all the courses (course == 1), but with the same id.
+            $dbtypeidparameter = array('id' => $oldtypeid, 'baseurl' => $data->baseurl);
+            $dbtype = $DB->get_field_select('lti_types', 'id', "id=:id
+                    AND course=1 AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                    $dbtypeidparameter);
+            if ($dbtype) {
+                $newtypeid = $dbtype;
+            } else {
+                // 3. Find a type with the same baseurl in the actual site.
+                $dbtypeidparameter = array('course' => $courseid, 'baseurl' => $data->baseurl);
+                $dbtype = $DB->get_field_select('lti_types', 'id', "course=:course
+                        AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                        $dbtypeidparameter);
+                if ($dbtype) {
+                    $newtypeid = $dbtype;
+                } else {
+                    // 4. Find a site type for all the courses (course == 1) with the same baseurl.
+                    $dbtypeidparameter = array('course' => 1, 'baseurl' => $data->baseurl);
+                    $dbtype = $DB->get_field_select('lti_types', 'id', "course=1
+                            AND ".$DB->sql_compare_text('baseurl')."=:baseurl",
+                            $dbtypeidparameter);
+                    if ($dbtype) {
+                        $newtypeid = $dbtype;
+                    }
+                }
+            }
+        }
+        return $newtypeid;
+    }
+
+    /**
+     * We call the after_restore_lti to update the grade_items id's that we didn't know in the moment of creating
+     * the gradebookservices rows.
+     */
+    protected function after_restore_lti() {
+        global $DB;
+        $activitytask = $this->task;
+        $courseid = $activitytask->get_courseid();
+        $gbstoupdate = $DB->get_records('ltiservice_gradebookservices', array('gradeitemid' => 0, 'courseid' => $courseid));
+        foreach ($gbstoupdate as $gbs) {
+            $oldgradeitemid = $this->get_mappingid('gbsgradeitemoldid', $gbs->id, 0);
+            $newgradeitemid = $this->get_mappingid('grade_item', $oldgradeitemid, 0);
+            if ($newgradeitemid > 0) {
+                $gbs->gradeitemid = $newgradeitemid;
+                $DB->update_record('ltiservice_gradebookservices', $gbs);
+            }
+        }
     }
 
 }

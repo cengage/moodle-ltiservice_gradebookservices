@@ -25,6 +25,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2017060100;
+$plugin->version   = 2018011600;    // The current module version (Date: YYYYMMDDXX).
 $plugin->requires  = 2014111000;
 $plugin->component = 'ltiservice_gradebookservices';
